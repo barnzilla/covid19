@@ -1,0 +1,151 @@
+---
+title: "COVID-19 data from CANSIM Table 13-10-0766-01"
+author: "Joel Barnes"
+date: '`r format(Sys.time(), "%B %d, %Y") `'
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+    toc_float: true
+    toc_depth: 5
+    code_folding: show
+editor_options:
+  chunk_output_type: console
+---
+
+<style>
+  html, body { font-size: 14px; }
+  p { margin-bottom: 18px; }
+  h1 { margin-top: 30px; font-size: 1.75rem; }
+  h1.title {font-size: 2rem;  }
+  h2 { font-size: 1.35rem; margin-top: 30px; }
+  h3 { font-size: 1.15rem; margin-top: 30px; }
+  h4 { font-size: 1.05rem; margin-top: 30px; }
+  h4.date { margin-top: 0; margin-bottom: 3rem; }
+  p.caption { margin-top: 2rem; }
+  img { width: 100%; height: auto; }
+  blockquote { border-left: 5px solid #337ab7; border-bottom: 1px solid #efefef; font-weight: normal; font-size: 1rem; }
+  .dataTables_filter, .dataTables_length {font-weight: normal; }
+  div.main-container { width: 100% !important; max-width: 100% !important; margin-left: auto; margin-right: auto; }
+  td.dt-top { vertical-align: top; }
+  .level3 h3, .level4 h4 { color: #337ab7; font-weight: bold; }
+  .level4 h4 { margin-top: 96px;}
+  li > img { margin-top: 24px; margin-bottom: 24px; }
+</style>
+
+<img src="https://www.statcan.gc.ca/wet-boew4b/assets/sig-blk-en.svg" style = "max-width: 300px; height: auto; margin-bottom: 24px;" alt="logo">
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, dpi = 300)
+```
+
+# Load packages to extend base R
+
+```{r}
+# Define packages that will be used to extend base R
+package_names <- c("cansim", "ggplot2", "plyr", "tidyverse", "DT", "scales", "plotly", "xlsx") 
+
+# Install any packages that do not exist
+install_packages <- lapply(package_names, FUN = function(x) if(! require(x, character.only = TRUE)) install.packages(x))
+
+# Load the packages
+load_packages <- lapply(package_names, require, character.only = TRUE)
+```
+
+# Import CANSIM table
+
+```{r}
+d <- get_cansim("13-10-0766-01")
+```
+
+# Wrangle data
+## Reshape data from long to wide format
+
+```{r}
+d_wide <- spread(d %>% select("Case identifier number", "Case information", VALUE, REF_DATE), "Case information", VALUE)
+```
+
+## Add leading zeros to case identifier number
+
+```{r}
+d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = 5, pad = "0")
+```
+
+## Restructure select vectors as factors
+
+```{r}
+# Identify vectors
+vectors_to_factor <- c("Age group", "Gender", "Transmission", "Hospitalization", "Intensive care unit", "Death")
+
+# Restructure as factors
+d_wide[vectors_to_factor] <- lapply(d_wide[vectors_to_factor], factor)
+
+# Add semantic labels
+d_wide$`Age group` <- revalue(d_wide$`Age group`, c("1" = "0-19", "2" = "20-29", "3" = "30-39", "4" = "40-49", "5" = "50-59", "6" = "60-69", "7" = "70-79", "8" = "80+", "99" = "Not stated"))
+d_wide$Gender <- revalue(d_wide$Gender, c("1" = "Male", "2" = "Female", "7" = "Non-binary", "9" = "Not stated"))
+d_wide$Transmission <- revalue(d_wide$Transmission, c("1" = "Travel exposure", "2" = "Community exposure", "3" = "Pending"))
+d_wide$Hospitalization <- revalue(d_wide$Hospitalization, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
+d_wide$`Intensive care unit` <- revalue(d_wide$`Intensive care unit`, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
+d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
+```
+
+## Create episode date vector
+
+```{r}
+# Add day and month vectors together along with the year 2020 and structure as a date object
+d_wide$`Episode date` <- as.Date(paste0(d_wide$REF_DATE, "-", str_pad(d_wide$`Episode date - month`, 2, pad = "0"), "-", str_pad(d_wide$`Episode date - day`, 2, pad = "0")), format = "%Y-%m-%d")
+
+# Change format to %d-%b-%y
+d_wide$`Episode date` <- format(d_wide$`Episode date`, format = "%d-%b-%y")
+```
+
+## Remove unwanted vectors from data
+
+```{r}
+d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", Transmission, Hospitalization, "Intensive care unit", Death)
+```
+
+## Rename vectors
+
+```{r}
+names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Exposure Setting", "Hospitalized", "Intensive Care Unit", "Death")
+```
+
+## Order data by case ids in ascending order
+
+```{r}
+d_wide <- d_wide %>% arrange(CaseID)
+```
+
+# Sortable/searchable data table
+
+```{r}
+# Output data to JavaScript datatable
+datatable(d_wide, 
+  extensions = c("Buttons", "Scroller"), 
+  options = list(
+    pageLength = 250, 
+    dom = "Bfrtip", 
+    buttons = c("colvis", "copy", "csv", "excel", "pdf"), 
+    deferRender = TRUE, 
+    searchDelay = 500,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#fff', 'color': '#111'});",
+      "}"
+    ),
+    columnDefs = list(
+      list(visible = FALSE, targets = c())
+    )
+  ), 
+  rownames = FALSE,
+  escape = FALSE,
+  editable = TRUE
+)
+```
+
+# Export data to Excel
+
+```{r}
+write.xlsx2(as.data.frame(d_wide), paste0("c:/users/joel/google drive/github/covid19/Table 13-10-0766-01 - updated ", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), row.names = FALSE, showNA = FALSE)
+```
