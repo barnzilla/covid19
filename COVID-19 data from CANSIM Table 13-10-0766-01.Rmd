@@ -43,7 +43,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, dpi = 300)
 
 ```{r}
 # Define packages that will be used to extend base R
-package_names <- c("cansim", "ggplot2", "plyr", "tidyverse", "DT", "scales", "plotly", "xlsx") 
+package_names <- c("cansim", "DT", "ggplot2", "plyr", "plotly", "scales", "tidyverse", "xlsx") 
 
 # Install any packages that do not exist
 install_packages <- lapply(package_names, FUN = function(x) if(! require(x, character.only = TRUE)) install.packages(x))
@@ -58,7 +58,7 @@ load_packages <- lapply(package_names, require, character.only = TRUE)
 d <- get_cansim("13-10-0766-01")
 ```
 
-# Wrangle data
+# Data wrangling
 ## Reshape data from long to wide format
 
 ```{r}
@@ -68,7 +68,7 @@ d_wide <- spread(d %>% select("Case identifier number", "Case information", VALU
 ## Add leading zeros to case identifier number
 
 ```{r}
-d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = 5, pad = "0")
+d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
 ```
 
 ## Restructure select vectors as factors
@@ -92,7 +92,7 @@ d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stat
 ## Create episode date vector
 
 ```{r}
-# Add day and month vectors together along with the year 2020 and structure as a date object
+# Add day, month and reference year vectors together and structure as a date object
 d_wide$`Episode date` <- as.Date(paste0(d_wide$REF_DATE, "-", str_pad(d_wide$`Episode date - month`, 2, pad = "0"), "-", str_pad(d_wide$`Episode date - day`, 2, pad = "0")), format = "%Y-%m-%d")
 
 # Change format to %d-%b-%y
@@ -117,14 +117,20 @@ names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Exposure Se
 d_wide <- d_wide %>% arrange(CaseID)
 ```
 
-# Sortable/searchable data table
+## Export data to Excel
+
+```{r}
+write.xlsx2(as.data.frame(d_wide), paste0("c:/users/joel/google drive/github/covid19/Table 13-10-0766-01 - updated ", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), row.names = FALSE, showNA = FALSE)
+```
+
+# Sortable/searchable raw data table
 
 ```{r}
 # Output data to JavaScript datatable
 datatable(d_wide, 
   extensions = c("Buttons", "Scroller"), 
   options = list(
-    pageLength = 250, 
+    pageLength = 25, 
     dom = "Bfrtip", 
     buttons = c("colvis", "copy", "csv", "excel", "pdf"), 
     deferRender = TRUE, 
@@ -144,8 +150,96 @@ datatable(d_wide,
 )
 ```
 
-# Export data to Excel
+# Incidence
+## Sortable/searchable data table by age group
 
 ```{r}
-write.xlsx2(as.data.frame(d_wide), paste0("c:/users/joel/google drive/github/covid19/Table 13-10-0766-01 - updated ", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), row.names = FALSE, showNA = FALSE)
+# Convert episode date to date object
+d_wide$`Episode Date` <- as.Date(d_wide$`Episode Date`, format = "%d-%b-%y")
+
+# Remove cases with no episode date or with an age group value of "Not stated
+d_wide <- d_wide %>% filter(! is.na(`Episode Date`) & `Age Group` != "Not stated")
+
+# Drop "Not stated" level from the age group factor
+d_wide$`Age Group` <- droplevels(d_wide$`Age Group`, "Not stated")
+
+# Sort data by episode date
+d_wide <- d_wide[order(d_wide$`Episode Date`),]
+
+# Collapse several age group levels
+#d_wide$`Age Group` <- fct_collapse(d_wide$`Age Group`, "20-59" = c("20-29", "30-39", "40-49", "50-59"))
+
+# Create a crosstab
+crosstab <- d_wide %>% group_by(`Age Group`, `Episode Date`) %>% tally()
+
+# Rename the n vector
+names(crosstab)[ncol(crosstab)] <- "Incidence"
+
+# Compute cumulative incidence
+crosstab <- crosstab %>% group_by(`Age Group`) %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+
+# Output data to JavaScript datatable
+datatable(crosstab, 
+  extensions = c("Buttons", "Scroller"), 
+  options = list(
+    pageLength = 25, 
+    dom = "Bfrtip", 
+    buttons = c("colvis", "copy", "csv", "excel", "pdf"), 
+    deferRender = TRUE, 
+    searchDelay = 500,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#fff', 'color': '#111'});",
+      "}"
+    ),
+    columnDefs = list(
+      list(visible = FALSE, targets = c())
+    )
+  ), 
+  rownames = FALSE,
+  escape = FALSE,
+  editable = TRUE
+)
+```
+
+## Incidence plots by age group
+
+```{r}
+# Print line plot
+point_size <- 0.5
+element_text_size <- 12
+plot_width <- 900
+plot_height <- 614
+ggplotly(ggplot(crosstab, aes(x = `Episode Date`, y = Incidence)) +
+    geom_line(aes(color = `Age Group`), size = point_size) +
+    ggtitle("Incidence by age group") +
+    xlab("Date") +
+    ylab("Incidence") +
+    theme_minimal() +
+    theme(
+       plot.title = element_text(size = element_text_size),
+       axis.title.x = element_text(size = element_text_size),
+       axis.title.y = element_text(size = element_text_size),
+       legend.text = element_text(size = element_text_size),
+       legend.title = element_blank()
+  ), width = plot_width, height = plot_height)
+```
+
+## Cumulative incidence plots by age group
+
+```{r}
+# Print line plot
+ggplotly(ggplot(crosstab, aes(x = `Episode Date`, y = `Cumulative Incidence`)) +
+    geom_line(aes(color = `Age Group`), size = point_size) +
+    ggtitle("Cumulative incidence by age group") +
+    xlab("Date") +
+    ylab("Cumulative incidence") +
+    theme_minimal() +
+    theme(
+       plot.title = element_text(size = element_text_size),
+       axis.title.x = element_text(size = element_text_size),
+       axis.title.y = element_text(size = element_text_size),
+       legend.text = element_text(size = element_text_size),
+       legend.title = element_blank()
+  ), width = plot_width, height = plot_height)
 ```
