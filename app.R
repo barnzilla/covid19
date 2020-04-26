@@ -14,16 +14,25 @@ library("xlsx")
 
 # Define UI
 ui <- navbarPage(
-  "COVID-19 cases in Canada",
+  title = div("COVID-19 cases in Canada", img(src = "maple-leaf.png", style = "margin-left: 10px; margin-right: 5px; height: 20px; width: auto;")),
   theme = shinytheme("cerulean"),
-  tabPanel("Age comparisons",
+  tabPanel("Age groups",
      sidebarPanel(
        uiOutput("data_snapshot"),
        uiOutput("age_group"),
+       uiOutput("gender"),
        width = 3
      ),
      mainPanel(
-       textOutput("number_of_cases"), br(), plotlyOutput("get_cumulative_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), plotlyOutput("get_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), DTOutput("get_crosstab_table") %>% withSpinner(color = "#44ade9"), br(), br(),
+       tags$style(type="text/css",
+          ".shiny-output-error { visibility: hidden; }",
+          ".shiny-output-error:before { visibility: hidden; }"
+       ),
+       div(tags$strong("Please use with caution: "), "this data is preliminary and subject to change. Please visit ", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310076601", target = "_blank", "this page"), "page to learn more about the data.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), 
+       uiOutput("number_of_cases"), br(),
+       plotlyOutput("get_cumulative_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), 
+       plotlyOutput("get_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), 
+       DTOutput("get_crosstab_table") %>% withSpinner(color = "#44ade9"), br(), br(),
        width = 9
      )
   ),
@@ -34,7 +43,12 @@ ui <- navbarPage(
        width = 3
      ),
      mainPanel(
+       tags$style(type="text/css",
+          ".shiny-output-error { visibility: hidden; }",
+          ".shiny-output-error:before { visibility: hidden; }"
+       ),
        plotlyOutput("get_data_snapshot_plot") %>% withSpinner(color = "#44ade9"), br(), br(),
+       DTOutput("get_crosstab_table2") %>% withSpinner(color = "#44ade9"), br(), br(),
        width = 9
      )
   ),
@@ -45,8 +59,23 @@ ui <- navbarPage(
        width = 3
      ),
      mainPanel(
-     p(tags$strong("Source: "), "Statistics Canada.", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310076601", target = "_blank", "Table  13-10-0766-01."), " Detailed confirmed cases of coronavirus disease (COVID-19) (Preliminary data), Public Health Agency of Canada."), br(), DTOutput("get_cansim_data") %>% withSpinner(color = "#44ade9"), br(), br(),
-     width = 9
+       tags$style(type="text/css",
+          ".shiny-output-error { visibility: hidden; }",
+          ".shiny-output-error:before { visibility: hidden; }"
+       ),
+      div(tags$strong("Source: "), "Statistics Canada.", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310076601", target = "_blank", "Table  13-10-0766-01."), " Detailed confirmed cases of coronavirus disease (COVID-19) (Preliminary data), Public Health Agency of Canada.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), 
+      DTOutput("get_cansim_data") %>% withSpinner(color = "#44ade9"), br(), br(),
+      width = 9
+     )
+  ),
+  tabPanel("About",
+     mainPanel(
+       tags$style(type="text/css",
+                  ".shiny-output-error { visibility: hidden; }",
+                  ".shiny-output-error:before { visibility: hidden; }"
+       ),
+       p("This R Shiny app was developed by ", tags$a(href = "https://www.barnzilla.ca", target = "_blank", "Joel Barnes.")), br(), 
+       width = 12
      )
   )
 )
@@ -88,7 +117,7 @@ server <- function(input, output) {
       crosstab <- crosstab %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
       
       # Create an age group vector
-      crosstab <- crosstab %>% mutate(`Age Group` = rep("All ages", nrow(crosstab)))
+      crosstab <- crosstab %>% mutate(`Age Group` = rep("All ages", nrow(crosstab)), Gender = rep("All genders", nrow(crosstab)))
       
       # Reorder columns
       crosstab <- crosstab %>% select(`Age Group`, everything())
@@ -114,18 +143,47 @@ server <- function(input, output) {
       
       # Add day column
       crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+      crosstab2$Gender <- rep("All genders", nrow(crosstab2))
       
       # Restructure as tibble
       crosstab2 <- as_tibble(crosstab2)
       
+      # Create a crosstab by gender
+      crosstab3 <- d %>% group_by(`Age Group`, Gender, `Episode Date`) %>% tally()
+      
+      # Rename the n vector
+      names(crosstab3)[ncol(crosstab3)] <- "Incidence"
+      
+      # Restructure as tibble
+      crosstab3 <- as_tibble(crosstab3)
+      
+      # Compute cumulative incidence
+      #crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+      crosstab3$`Cumulative Incidence` <- unlist(aggregate(crosstab3$Incidence, by = list(crosstab3$Gender, crosstab3$`Age Group`), cumsum)$x)
+      
+      # Restructure as tibble
+      crosstab3 <- as_tibble(crosstab3)
+      
+      # Add day column
+      crosstab3 <- crosstab3 %>% group_by(`Age Group`, Gender) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+      
+      # Restructure as tibble
+      crosstab3 <- as_tibble(crosstab3)
+      
       # Combine both crosstabs
-      crosstab <- rbind(crosstab, crosstab2)
+      crosstab <- rbind(crosstab, crosstab2, crosstab3)
       
       # Ensure that the age group vector is a factor
       crosstab$`Age Group` <- factor(crosstab$`Age Group`)
       
       # Relevel the age group factor
       crosstab$`Age Group` <- relevel(crosstab$`Age Group`, ref = "All ages")
+      
+      # Ensure that the age group vector is a factor
+      crosstab$Gender <- factor(crosstab$Gender)
+      
+      # Relevel the age group factor
+      crosstab$Gender <- relevel(crosstab$Gender, ref = "All genders")
       
       # Add crosstab to list
       l$crosstab <- crosstab
@@ -178,7 +236,8 @@ server <- function(input, output) {
       crosstab <- crosstab %>% select(`Age Group`, everything())
       
       # Add day column
-      crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)), Snapshot = rep(snapshot, nrow(crosstab)))
+      crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+      crosstab$Snapshot <- rep(snapshot, nrow(crosstab))
       
       # Create a crosstab by age group
       crosstab2 <- d %>% group_by(`Age Group`, `Episode Date`) %>% tally()
@@ -197,7 +256,8 @@ server <- function(input, output) {
       crosstab2 <- as_tibble(crosstab2)
       
       # Add day column
-      crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)), Snapshot = rep(snapshot, nrow(crosstab2)))
+      crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+      crosstab2$Snapshot <- rep(snapshot, nrow(crosstab2))
       
       # Restructure as tibble
       crosstab2 <- as_tibble(crosstab2)
@@ -231,27 +291,36 @@ server <- function(input, output) {
   
   # Build age group menu based on the number of available age groups
   output$age_group <- renderUI({
-    if(is.null(get_data()$crosstab)) { 
+    crosstab <- get_data()$crosstab
+    if(is.null(crosstab)) { 
       return() 
     } else {
-      options <- levels(get_data()$crosstab$`Age Group`)
-      names(options) <- levels(get_data()$crosstab$`Age Group`)
-      if(! is.null(input$age_group3)) {
-        default_selections <- input$age_group3
-      } else {
-        default_selections <- options[options != "All ages" & options != "Not stated"]
-      }
-      checkboxGroupInput("age_group", label = "Age groups", choices = options, selected = default_selections)
+      options <- levels(crosstab$`Age Group`)
+      names(options) <- levels(crosstab$`Age Group`)
+      checkboxGroupInput("age_group", label = "Age groups", choices = options, selected = options[options != "All ages" & options != "Not stated"])
+    }
+  })
+  
+  # Build age group menu based on the number of available age groups
+  output$gender <- renderUI({
+    crosstab <- get_data()$crosstab
+    if(is.null(crosstab)) { 
+      return() 
+    } else {
+      options <- levels(crosstab$Gender)
+      names(options) <- levels(crosstab$Gender)
+      selectInput("gender", label = "Genders", choices = options)
     }
   })
   
   # Build age group menu based on the number of available age groups
   output$age_group2 <- renderUI({
+    crosstab <- get_data()$crosstab
     if(is.null(get_data()$crosstab)) { 
       return() 
     } else {
-      options <- levels(get_data()$crosstab$`Age Group`)
-      names(options) <- levels(get_data()$crosstab$`Age Group`)
+      options <- levels(crosstab$`Age Group`)
+      names(options) <- levels(crosstab$`Age Group`)
       selectInput("age_group2", label = "Age groups", choices = options)
     }
   })
@@ -263,12 +332,7 @@ server <- function(input, output) {
     } else {
       options <- levels(get_data()$crosstab$`Age Group`)
       names(options) <- levels(get_data()$crosstab$`Age Group`)
-      if(! is.null(input$age_group)) {
-        default_selections <- input$age_group
-      } else {
-        default_selections <- options[options != "All ages" & options != "Not stated"]
-      }
-      checkboxGroupInput("age_group3", label = "Age groups", choices = options, selected = default_selections)
+      checkboxGroupInput("age_group3", label = "Age groups", choices = options, selected = options[options != "All ages" & options != "Not stated"])
     }
   })
   
@@ -354,7 +418,7 @@ server <- function(input, output) {
     rownames = FALSE,
     options = list(
       columnDefs = list(list(visible = FALSE, targets = c())),
-      pageLength = 100, 
+      pageLength = 50, 
       dom = "Bfrtip", 
       buttons = c("colvis", "copy", "csv", "excel", "pdf"), 
       deferRender = TRUE, 
@@ -369,12 +433,34 @@ server <- function(input, output) {
   
   # Render plot data in a searchable/sortable table
   output$get_crosstab_table <- renderDT(
-    get_data()$crosstab %>% filter(`Age Group` %in% input$age_group) %>% arrange(desc(Day)) %>% select(`Age Group`, `Episode Date`, Day, everything()),
+    cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender) %>% arrange(desc(Day)) %>% select(`Age Group`, Gender, `Episode Date`, Day, everything()),
     extensions = c("Buttons", "Scroller"), 
     rownames = FALSE,
     options = list(
       columnDefs = list(list(visible = FALSE, targets = c())),
-      pageLength = 100, 
+      pageLength = 50, 
+      dom = "Bfrtip", 
+      buttons = c("colvis", "copy", "csv", "excel", "pdf"), 
+      deferRender = TRUE, 
+      searchDelay = 500,
+      initComplete = JS(
+        "function(settings, json) {",
+        "$(this.api().table().header()).css({'background-color': '#fff', 'color': '#111'});",
+        "}"
+      )
+    )
+  )
+  
+  cached <- reactiveValues()
+  
+  # Render plot data in a searchable/sortable table
+  output$get_crosstab_table2 <- renderDT(
+    cached$d %>% filter(`Age Group` %in% input$age_group2) %>% arrange(desc(Day)) %>% select(`Age Group`, `Episode Date`, Day, Snapshot, everything()),
+    extensions = c("Buttons", "Scroller"), 
+    rownames = FALSE,
+    options = list(
+      columnDefs = list(list(visible = FALSE, targets = c())),
+      pageLength = 50, 
       dom = "Bfrtip", 
       buttons = c("colvis", "copy", "csv", "excel", "pdf"), 
       deferRender = TRUE, 
@@ -390,14 +476,16 @@ server <- function(input, output) {
   # Build cumulative incidence plot
   output$get_cumulative_incidence_plot <- renderPlotly({
     # generate bins based on input$bins from ui.R
-    if(is.null(get_data()$d) | is.null(input$age_group)) {
+    crosstab <- get_data()$crosstab
+    if(is.null(crosstab) | is.null(input$age_group)) {
       return()
     } else {
+      cached$crosstab <- crosstab
       point_size <- 0.5
       element_text_size <- 12
       #plot_width <- 900
       #plot_height <- 614
-      ggplotly(ggplot(get_data()$crosstab %>% filter(`Age Group` %in% input$age_group), aes(x = `Episode Date`, y = `Cumulative Incidence`)) +
+      ggplotly(ggplot(crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender), aes(x = `Episode Date`, y = `Cumulative Incidence`)) +
        geom_line(aes(color = `Age Group`), size = point_size) +
        #ggtitle("Cumulative incidence") +
        xlab("Date") +
@@ -424,6 +512,7 @@ server <- function(input, output) {
       for(i in 1:length(input$data_snapshot2)) {
         d <- rbind(d, get_data2(input$data_snapshot2[i])$crosstab)
       }
+      cached$d <- d
       point_size <- 0.5
       element_text_size <- 12
       #plot_width <- 900
@@ -448,14 +537,14 @@ server <- function(input, output) {
   # Build incidence plot
   output$get_incidence_plot <- renderPlotly({
     # generate bins based on input$bins from ui.R
-    if(is.null(get_data()$d) | is.null(input$age_group)) {
+    if(is.null(cached$crosstab) | is.null(input$age_group)) {
       return()
     } else {
       point_size <- 0.5
       element_text_size <- 12
       #plot_width <- 900
       #plot_height <- 614
-      ggplotly(ggplot(get_data()$crosstab %>% filter(`Age Group` %in% input$age_group), aes(x = `Episode Date`, y = Incidence)) +
+      ggplotly(ggplot(cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender), aes(x = `Episode Date`, y = Incidence)) +
          geom_line(aes(color = `Age Group`), size = point_size) +
          #ggtitle("Incidence") +
          xlab("Date") +
@@ -473,18 +562,25 @@ server <- function(input, output) {
   })
   
   # Print the number of cases selected
-  output$number_of_cases <- renderText({
-    if(is.null(get_data()$d) | is.null(input$age_group)) {
+  output$number_of_cases <- reactive({
+    cached <- get_data()
+    if(is.null(cached$d) | is.null(input$age_group)) {
       return()
     } else {
-      if("All ages" %in% input$age_group) {
-        cases <- get_data()$d
+      if("All ages" %in% input$age_group & input$gender == "All genders") {
+        cases <- cached$d
         prop <- 100
       } else {
-        cases <- get_data()$d %>% filter(`Age Group` %in% input$age_group)
-        prop <- nrow(cases) / nrow(get_data()$d) * 100
+        if(input$gender == "All genders") {
+          gender_selections <- unique(d$Gender)
+        } else {
+          gender_selections <- input$gender
+        }
+        cases <- cached$d %>% filter(`Age Group` %in% input$age_group & Gender %in% gender_selections)
+        prop <- nrow(cases) / nrow(cached$d) * 100
       }
-      return(paste0(format(round(prop, 1), nsmall = 1), "% of cases (", format(nrow(cases), big.mark = ","), " out of ", format(nrow(get_data()$d), big.mark = ","), ") in this data snapshot match the current search criteria."))
+      #return(list(cases = format(nrow(cases), big.mark = ","), total_cases = format(nrow(cached$d), big.mark = ","), prop = format(round(prop, 1), nsmall = 1)))
+      return(paste0(format(round(prop, 1), nsmall = 1), "% of cases (", format(nrow(cases), big.mark = ","), " out of ", format(nrow(cached$d), big.mark = ","), ") in this data snapshot match the current search criteria."))
     }
   })
   
