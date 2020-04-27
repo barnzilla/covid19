@@ -26,6 +26,7 @@ ui <- navbarPage(
             uiOutput("icu"),
             uiOutput("death"),
             uiOutput("exposure"),
+            uiOutput("x_axis"),
             width = 3
         ),
         mainPanel(
@@ -46,6 +47,7 @@ ui <- navbarPage(
         sidebarPanel(
             uiOutput("age_group2"),
             uiOutput("snapshot2"),
+            uiOutput("x_axis2"),
             width = 3
         ),
         mainPanel(
@@ -189,16 +191,16 @@ server <- function(input, output) {
             e2 <- "Gender %in% combo$gender &"
         } 
         if(length(grep("\\All\\b", combo$hospitalized)) == 0) {
-            e3 <- "Hospitalized %in% combo$hospitalized"
+            e3 <- "Hospitalized %in% combo$hospitalized &"
         }
         if(length(grep("\\All\\b", combo$icu)) == 0) {
-            e4 <- "`Intensive Care Unit` %in% combo$icu"
+            e4 <- "`Intensive Care Unit` %in% combo$icu &"
         }
         if(length(grep("\\All\\b", combo$death)) == 0) {
-            e5 <- "Death %in% combo$death"
+            e5 <- "Death %in% combo$death &"
         }
         if(length(grep("\\All\\b", combo$exposure)) == 0) {
-            e6 <- "`Exposure Setting` %in% combo$exposure"
+            e6 <- "`Exposure Setting` %in% combo$exposure &"
         }
         
         if(length(e1) > 0 | length(e2) == 0 | length(e3) == 0 | length(e4) == 0 | length(e5) == 0 | length(e6) == 0) {
@@ -408,9 +410,10 @@ server <- function(input, output) {
             cached$comparison_data <- d
             point_size <- 0.5
             element_text_size <- 12
-            ggplotly(ggplot(d %>% filter(`Age Group` %in% input$age_group2), aes(x = `Episode Date`, y = `Cumulative Incidence`)) +
+            x_label <- ifelse(input$x_axis2 == "Day", "Day number (since first case)", "Date")
+            ggplotly(ggplot(d %>% filter(`Age Group` %in% input$age_group2), aes(x = !!rlang::sym(input$x_axis2), y = `Cumulative Incidence`)) +
                 geom_line(aes(color = Snapshot), size = point_size) +
-                xlab("Date") +
+                xlab(x_label) +
                 ylab("Cumulative incidence") +
                 scale_y_continuous(labels = comma) +
                 theme_minimal() +
@@ -438,9 +441,10 @@ server <- function(input, output) {
             cached$crosstab <- crosstab
             point_size <- 0.5
             element_text_size <- 12
-            ggplotly(ggplot(crosstab, aes(x = `Episode Date`, y = `Cumulative Incidence`)) +
+            x_label <- ifelse(input$x_axis == "Day", "Day number (since first case)", "Date")
+            ggplotly(ggplot(crosstab, aes(x = !!rlang::sym(input$x_axis), y = `Cumulative Incidence`)) +
             geom_line(aes(color = `Age Group`), size = point_size) +
-            xlab("Date") +
+            xlab(x_label) +
             ylab("Cumulative incidence") +
             scale_y_continuous(labels = comma) +
             theme_minimal() +
@@ -565,6 +569,30 @@ server <- function(input, output) {
             return()
         } else {
             selectInput("snapshot3", "Data snapshots", choices = cached$files2)
+        }
+    })
+    
+    # Build x-axis menu
+    output$x_axis <- renderUI({
+        d <- cached$d
+        if(is.null(d)) { 
+            return() 
+        } else {
+            options <- c("Episode date" = "Episode Date", "Day number since first case" = "Day")
+            cached$x_axis_options <- options
+            selectInput("x_axis", label = "X axis variable", choices = options)
+        }
+    })
+    
+    # Build x-axis menu
+    output$x_axis2 <- renderUI({
+        d <- cached$d
+        if(is.null(d)) { 
+            return() 
+        } else {
+            options <- c("Episode date" = "Episode Date", "Day number since first case" = "Day")
+            cached$x_axis_options <- options
+            selectInput("x_axis2", label = "X axis variable", choices = options)
         }
     })
 }
