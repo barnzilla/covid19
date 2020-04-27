@@ -342,7 +342,7 @@ server <- function(input, output) {
             options <- levels(options)
             names(options) <- levels(options)
             cached$death_options <- options
-            selectInput("death", label = "Deceased", choices = options)
+            radioButtons("death", label = "Deceased", choices = options)
         }
     })
     
@@ -357,7 +357,7 @@ server <- function(input, output) {
             options <- levels(options)
             names(options) <- levels(options)
             cached$exposure_options <- options
-            selectInput("exposure", label = "Exposure settings", choices = options)
+            radioButtons("exposure", label = "Exposure settings", choices = options)
         }
     })
     
@@ -372,7 +372,7 @@ server <- function(input, output) {
             options <- levels(options)
             names(options) <- levels(options)
             cached$gender_options <- options
-            selectInput("gender", label = "Genders", choices = options)
+            radioButtons("gender", label = "Genders", choices = options)
         }
     })
     
@@ -485,7 +485,7 @@ server <- function(input, output) {
         rownames = FALSE,
         options = list(
             columnDefs = list(list(visible = FALSE, targets = c())),
-            pageLength = 50, 
+            pageLength = 10, 
             dom = "Bfrtip", 
             buttons = c("colvis", "copy", "csv", "excel", "pdf"), 
             deferRender = TRUE, 
@@ -509,7 +509,7 @@ server <- function(input, output) {
             options <- levels(options)
             names(options) <- levels(options)
             cached$hospital_options <- options
-            selectInput("hospitalized", label = "Hospitalized", choices = options)
+            radioButtons("hospitalized", label = "Hospitalized", choices = options)
         }
     })
     
@@ -524,7 +524,7 @@ server <- function(input, output) {
             options <- levels(options)
             names(options) <- levels(options)
             cached$icu_options <- options
-            selectInput("icu", label = "In an intensive care unit", choices = options)
+            radioButtons("icu", label = "In intensive care", choices = options)
         }
     })
     
@@ -580,7 +580,7 @@ server <- function(input, output) {
         } else {
             options <- c("Episode date" = "Episode Date", "Day number since first case" = "Day")
             cached$x_axis_options <- options
-            selectInput("x_axis", label = "X axis variable", choices = options)
+            radioButtons("x_axis", label = "Horizontal axis", choices = options)
         }
     })
     
@@ -592,7 +592,7 @@ server <- function(input, output) {
         } else {
             options <- c("Episode date" = "Episode Date", "Day number since first case" = "Day")
             cached$x_axis_options <- options
-            selectInput("x_axis2", label = "X axis variable", choices = options)
+            radioButtons("x_axis2", label = "Horizontal axis", choices = options)
         }
     })
     

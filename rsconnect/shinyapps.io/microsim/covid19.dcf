@@ -5,9 +5,9 @@ account: microsim
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2185353
-bundleId: 3071501
+bundleId: 3072125
 url: https://microsim.shinyapps.io/covid19/
-when: 1587991060.96228
+when: 1587999706.62022
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: appCURRENT.R|COVID-19-data-from-CANSIM-Table-13-10-0766-01.html|COVID-19 data from CANSIM Table 13-10-0766-01.Rmd
+ignoredFiles: COVID-19-data-from-CANSIM-Table-13-10-0766-01.html|COVID-19 data from CANSIM Table 13-10-0766-01.Rmd
