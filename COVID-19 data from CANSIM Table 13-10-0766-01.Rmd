@@ -55,7 +55,7 @@ load_packages <- lapply(package_names, require, character.only = TRUE)
 # Import CANSIM table
 
 ```{r}
-d <- get_cansim("13-10-0766-01")
+d <- get_cansim("13-10-0766-01", refresh = TRUE)
 ```
 
 # Data wrangling
@@ -200,9 +200,75 @@ datatable(crosstab,
   escape = FALSE,
   editable = TRUE
 )
+
+
+d <- d_wide
+
+
+# Create crosstab for plot
+      # Convert episode date to date object
+      d$`Episode Date` <- as.Date(d$`Episode Date`, format = "%d-%b-%y")
+      
+      # Remove cases with no episode date
+      d <- d %>% filter(! is.na(`Episode Date`))
+      
+      # Sort data by episode date
+      d <- d[order(d$`Episode Date`),]
+      
+      # Create a crosstab
+      crosstab <- d %>% group_by(`Episode Date`) %>% tally()
+      
+      # Rename the n vector
+      names(crosstab)[ncol(crosstab)] <- "Incidence"
+      
+      # Compute cumulative incidence
+      crosstab <- crosstab %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+      
+      # Create an age group vector
+      crosstab <- crosstab %>% mutate(`Age Group` = rep("All ages", nrow(crosstab)))
+      
+      # Reorder columns
+      crosstab <- crosstab %>% select(`Age Group`, everything())
+      
+      # Add day column
+      crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+      
+      # Create a crosstab by age group
+      crosstab2 <- d %>% group_by(`Age Group`, `Episode Date`) %>% tally()
+      
+      # Rename the n vector
+      names(crosstab2)[ncol(crosstab2)] <- "Incidence"
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Compute cumulative incidence
+      #crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+      
+      crosstab2$`Cumulative Incidence` <- unlist(aggregate(crosstab2$Incidence, by = list(crosstab2$`Age Group`), cumsum)$x)
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Add day column
+      crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Combine both crosstabs
+      crosstab <- rbind(crosstab, crosstab2)
+      
+      # Ensure that the age group vector is a factor
+      crosstab$`Age Group` <- factor(crosstab$`Age Group`)
+      
+      # Relevel the age group factor
+      crosstab$`Age Group` <- relevel(crosstab$`Age Group`, ref = "All ages")
+
+
 ```
 
-## Incidence plots by age group
+## Incidence plot by age group
 
 ```{r}
 # Print line plot
@@ -225,7 +291,26 @@ ggplotly(ggplot(crosstab, aes(x = `Episode Date`, y = Incidence)) +
   ), width = plot_width, height = plot_height)
 ```
 
-## Cumulative incidence plots by age group
+## Incidence plot by age group
+
+```{r}
+# Print line plot
+ggplotly(ggplot(crosstab, aes(x = `Episode Date`, y = `Incidence`)) +
+    geom_line(aes(color = `Age Group`), size = point_size) +
+    ggtitle("Cumulative incidence by age group") +
+    xlab("Date") +
+    ylab("Cumulative incidence") +
+    theme_minimal() +
+    theme(
+       plot.title = element_text(size = element_text_size),
+       axis.title.x = element_text(size = element_text_size),
+       axis.title.y = element_text(size = element_text_size),
+       legend.text = element_text(size = element_text_size),
+       legend.title = element_blank()
+  ), width = plot_width, height = plot_height)
+```
+
+## Cumulative incidence plot by age group
 
 ```{r}
 # Print line plot
@@ -242,4 +327,185 @@ ggplotly(ggplot(crosstab, aes(x = `Episode Date`, y = `Cumulative Incidence`)) +
        legend.text = element_text(size = element_text_size),
        legend.title = element_blank()
   ), width = plot_width, height = plot_height)
+```
+
+
+```{r}
+
+# Get data for the comparison of data snapshots
+  get_data2 <- function(x) {
+    if(is.null(x) | ! x %in% list.files()) {
+      return(list(d = NULL, crosstab = NULL))
+    } else {
+      # Get data
+      d <- read_xlsx(x)
+      
+      # Isolate date
+      snapshot <- unname(sapply(x, function(x) strsplit(x, "updated ")[[1]][2]))
+      snapshot <- gsub(".xlsx", "", snapshot)
+      
+      # Reformt the date
+      snapshot <- format(as.Date(file_names), "%B %d, %Y")
+      
+      # Add d to list
+      l <- list(d = d)
+      
+      # Create crosstab for plot
+      # Convert episode date to date object
+      d$`Episode Date` <- as.Date(d$`Episode Date`, format = "%d-%b-%y")
+      
+      # Remove cases with no episode date
+      d <- d %>% filter(! is.na(`Episode Date`))
+      
+      # Sort data by episode date
+      d <- d[order(d$`Episode Date`),]
+      
+      # Create a crosstab
+      crosstab <- d %>% group_by(`Episode Date`) %>% tally()
+      
+      # Rename the n vector
+      names(crosstab)[ncol(crosstab)] <- "Incidence"
+      
+      # Compute cumulative incidence
+      crosstab <- crosstab %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+      
+      # Create an age group vector
+      crosstab <- crosstab %>% mutate(`Age Group` = rep("All ages", nrow(crosstab)))
+      
+      # Reorder columns
+      crosstab <- crosstab %>% select(`Age Group`, everything())
+      
+      # Add day column
+      crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)), Snapshot = rep(snapshot, nrow(crosstab)))
+      
+      # Create a crosstab by age group
+      crosstab2 <- d %>% group_by(`Age Group`, `Episode Date`) %>% tally()
+      
+      # Rename the n vector
+      names(crosstab2)[ncol(crosstab2)] <- "Incidence"
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Compute cumulative incidence
+      #crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+      crosstab2$`Cumulative Incidence` <- unlist(aggregate(crosstab2$Incidence, by = list(crosstab2$`Age Group`), cumsum)$x)
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Add day column
+      crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)), Snapshot = rep(snapshot, nrow(crosstab2)))
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Combine both crosstabs
+      crosstab <- rbind(crosstab, crosstab2)
+      
+      # Ensure that the age group vector is a factor
+      crosstab$`Age Group` <- factor(crosstab$`Age Group`)
+      crosstab$Snapshot <- factor(crosstab$Snapshot)
+      
+      # Relevel the age group factor
+      crosstab$`Age Group` <- relevel(crosstab$`Age Group`, ref = "All ages")
+      
+      # Add crosstab to list
+      l$crosstab <- crosstab
+      
+      return(l)
+    }
+  }
+  
+  # Compute the day numbers from day 1
+  get_days <- function(x, day1) {
+    day1 <- day1 - 1
+    day <- c()
+    for(i in 1:length(x)) {
+      day[i] <- as.numeric(x[i] - day1)
+    }
+    return(day)
+  }
+
+
+a <- get_data2("Table 13-10-0766-01 - updated 2020-04-24.xlsx")
+
+x = "Table 13-10-0766-01 - updated 2020-04-24.xlsx"
+
+d <- read_xlsx(x)
+
+# Isolate date
+      snapshot <- strsplit(x, "updated ")[[1]][2]
+      snapshot <- gsub(".xlsx", "", snapshot)
+      
+      # Reformt the date
+      snapshot <- format(as.Date(snapshot), "%B %d, %Y")
+      
+      # Add d to list
+      l <- list(d = d)
+      
+      # Create crosstab for plot
+      # Convert episode date to date object
+      d$`Episode Date` <- as.Date(d$`Episode Date`, format = "%d-%b-%y")
+      
+      # Remove cases with no episode date
+      d <- d %>% filter(! is.na(`Episode Date`))
+      
+      # Sort data by episode date
+      d <- d[order(d$`Episode Date`),]
+      
+      # Create a crosstab
+      crosstab <- d %>% group_by(`Episode Date`) %>% tally()
+      
+      # Rename the n vector
+      names(crosstab)[ncol(crosstab)] <- "Incidence"
+      
+      # Compute cumulative incidence
+      crosstab <- crosstab %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+      
+      # Create an age group vector
+      crosstab <- crosstab %>% mutate(`Age Group` = rep("All ages", nrow(crosstab)))
+      
+      # Reorder columns
+      crosstab <- crosstab %>% select(`Age Group`, everything())
+      
+      # Add day column
+      crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)), Snapshot = rep(snapshot, nrow(crosstab)))
+      
+      # Create a crosstab by age group
+      crosstab2 <- d %>% group_by(`Age Group`, `Episode Date`) %>% tally()
+      
+      # Rename the n vector
+      names(crosstab2)[ncol(crosstab2)] <- "Incidence"
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Compute cumulative incidence
+      #crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+      crosstab2$`Cumulative Incidence` <- unlist(aggregate(crosstab2$Incidence, by = list(crosstab2$`Age Group`), cumsum)$x)
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Add day column
+      crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)), Snapshot = rep(snapshot, nrow(crosstab2)))
+      
+      # Restructure as tibble
+      crosstab2 <- as_tibble(crosstab2)
+      
+      # Combine both crosstabs
+      crosstab <- rbind(crosstab, crosstab2)
+      
+      # Ensure that the age group vector is a factor
+      crosstab$`Age Group` <- factor(crosstab$`Age Group`)
+      crosstab$Snapshot <- factor(crosstab$Snapshot)
+      
+      # Relevel the age group factor
+      crosstab$`Age Group` <- relevel(crosstab$`Age Group`, ref = "All ages")
+      
+      # Add crosstab to list
+      l$crosstab <- crosstab
+      
+      return(l)
 ```
