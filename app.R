@@ -137,7 +137,7 @@ server <- function(input, output) {
             crosstab <- crosstab %>% select(`Age Group`, everything())
             
             # Add day column
-            crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+            crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = cached$day1))
             crosstab$Snapshot <- rep(snapshot, nrow(crosstab))
             
             # Create a crosstab by age group
@@ -157,7 +157,7 @@ server <- function(input, output) {
             crosstab2 <- as_tibble(crosstab2)
             
             # Add day column
-            crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+            crosstab2 <- crosstab2 %>% group_by(`Age Group`) %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = cached$day1))
             crosstab2$Snapshot <- rep(snapshot, nrow(crosstab2))
             
             # Restructure as tibble
@@ -236,7 +236,7 @@ server <- function(input, output) {
         crosstab <- crosstab %>% select(`Age Group`, Gender, Hospitalized, `Intensive Care Unit`, Death, `Exposure Setting`, everything())
         
         # Add day column
-        crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = min(crosstab$`Episode Date`)))
+        crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = cached$day1))
         
         return(crosstab)
     }
@@ -269,6 +269,7 @@ server <- function(input, output) {
     output$age_group <- renderUI({
         d <- get_data(input$snapshot)
         cached$d <- d
+        cached$day1 <- sort(as.Date(d$`Episode Date`, format = "%d-%b-%y"))[1]
         if(is.null(d)) { 
             return() 
         } else {
