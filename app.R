@@ -37,7 +37,7 @@ ui <- navbarPage(
                 "a:hover { text-decoration: none !important; }"
             ),
             div(tags$strong("Please use with caution: "), "this data is preliminary and subject to change. Please visit ", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310076601", target = "_blank", style = "color: #c27571; font-weight: bold; text-decoration: underline;", "this page"), "to learn more about the data.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
-            textOutput("case_count") %>% withSpinner(color = "#44ade9"), br(),
+            div(textOutput("case_count") %>% withSpinner(color = "#44ade9"), style = "font-weight: bold; font-size: 1.75rem; text-align: center;") %>% withSpinner(color = "#44ade9"), br(), br(),
             plotlyOutput("get_cumulative_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), br(),
             #plotlyOutput("get_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), 
             DTOutput("get_plot_table") %>% withSpinner(color = "#44ade9"), br(), br(),
