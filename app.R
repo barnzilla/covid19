@@ -55,7 +55,7 @@ ui <- navbarPage(
                 ".shiny-output-error { visibility: hidden; }",
                 ".shiny-output-error:before { visibility: hidden; }"
             ),
-            div(tags$strong("Note: "), "at least two data snapshots must be selected for a comparison to be made.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), 
+            div(tags$strong("Note: "), "at least two data snapshots must be selected to make a comparison.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), 
             plotlyOutput("get_comparison_plot") %>% withSpinner(color = "#44ade9"), br(), br(),
             #DTOutput("get_comparison_table") %>% withSpinner(color = "#44ade9"), br(), br(),
             width = 9
@@ -530,16 +530,12 @@ server <- function(input, output) {
     
     # Build data snapshot menu based on the number of snapshots available
     output$snapshot <- renderUI({
-        cached$files <- list.files(pattern = "*.xlsx")
+        cached$files <- list.files(pattern = "^[^~]*.xlsx")
         if (is.null(cached$files)) {
             return()
         } else {
             # Get a list of data files that currently exist
             files <- sort(cached$files, decreasing = TRUE)
-            
-            if (!paste0("Table 13-10-0766-01 - updated ", format(Sys.time(), "%Y-%m-%d"), ".xlsx") %in% list.files()) {
-                files <- c(paste0("Table 13-10-0766-01 - updated ", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), files)
-            }
             
             # Isolate the date portion of the file name(s) to use in the drop down menu
             file_names <- unname(sapply(files, function(x) strsplit(x, "updated ")[[1]][2]))
@@ -595,49 +591,6 @@ server <- function(input, output) {
             radioButtons("x_axis2", label = "Horizontal axis", choices = options)
         }
     })
-    
-    # Wrangle the raw data
-    wrangle_data <- function(d) {
-        # Reshape data from long to wide format
-        d_wide <- spread(d %>% select("Case identifier number", "Case information", VALUE, REF_DATE), "Case information", VALUE)
-        
-        # Add leading zeros to case identifier number
-        d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
-        
-        # Identify select vectors
-        vectors_to_factor <- c("Age group", "Gender", "Transmission", "Hospitalization", "Intensive care unit", "Death")
-        
-        # Restructure as factors
-        d_wide[vectors_to_factor] <- lapply(d_wide[vectors_to_factor], factor)
-        
-        # Add semantic labels
-        d_wide$`Age group` <- revalue(d_wide$`Age group`, c("1" = "0-19", "2" = "20-29", "3" = "30-39", "4" = "40-49", "5" = "50-59", "6" = "60-69", "7" = "70-79", "8" = "80+", "99" = "Not stated"))
-        d_wide$Gender <- revalue(d_wide$Gender, c("1" = "Male", "2" = "Female", "7" = "Non-binary", "9" = "Not stated"))
-        d_wide$Transmission <- revalue(d_wide$Transmission, c("1" = "Travel exposure", "2" = "Community exposure", "3" = "Pending"))
-        d_wide$Hospitalization <- revalue(d_wide$Hospitalization, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
-        d_wide$`Intensive care unit` <- revalue(d_wide$`Intensive care unit`, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
-        d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
-        
-        # Add day, month and reference year vectors together and structure as a date object
-        d_wide$`Episode date` <- as.Date(paste0(d_wide$REF_DATE, "-", str_pad(d_wide$`Episode date - month`, 2, pad = "0"), "-", str_pad(d_wide$`Episode date - day`, 2, pad = "0")), format = "%Y-%m-%d")
-        
-        # Change format to %d-%b-%y
-        d_wide$`Episode date` <- format(d_wide$`Episode date`, format = "%d-%b-%y")
-        
-        # Remove unwanted vectors from data
-        d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", Transmission, Hospitalization, "Intensive care unit", Death)
-        
-        # Rename vectors
-        names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Exposure Setting", "Hospitalized", "Intensive Care Unit", "Death")
-        
-        # Order data by case ids in ascending order
-        d_wide <- d_wide %>% arrange(CaseID)
-        
-        # Export data to Excel
-        write.xlsx2(as.data.frame(d_wide), paste0("Table 13-10-0766-01 - updated ", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), row.names = FALSE, showNA = FALSE)
-        
-        return(d_wide)
-    }
 }
 
 # Run the application
