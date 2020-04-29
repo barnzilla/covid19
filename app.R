@@ -532,7 +532,7 @@ server <- function(input, output) {
     
     # Build data snapshot menu based on the number of snapshots available
     output$snapshot <- renderUI({
-        cached$files <- list.files(pattern = "^[^~]*.xlsx")
+        cached$files <- list.files(pattern = "^[^~|+]*.xlsx")
         if (is.null(cached$files)) {
             return()
         } else {
@@ -541,7 +541,7 @@ server <- function(input, output) {
             
             # Check to see if new snapshot needs to be created
             now <- now(tzone = "UTC") - hours(4)
-            if (! paste0("Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
+            if (! paste0("Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & ! paste0("+Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
                 # Import a new snapshot
                 new_snapshot <- get_cansim("13-10-0766-01", refresh = TRUE)
                 
@@ -549,10 +549,13 @@ server <- function(input, output) {
                 new_snapshot <- wrangle_data(new_snapshot)
                 
                 # Compare it to the last snapshot
-                compare <- all.equal(new_snapshot, read_xlsx(files[length(files)]))
+                last_snapshot <- read_xlsx(files[1])
+                compare <- all.equal(new_snapshot, last_snapshot)
                 
                 # If it's different from the last snapshot, store it and rebuild the snapshot menu
-                if(! isTRUE(compare)) {
+                if(isTRUE(compare) | nrow(new_snapshot) == nrow(last_snapshot)) {
+                    write.xlsx2(as.data.frame(new_snapshot), paste0("+Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx"), row.names = FALSE, showNA = FALSE)
+                } else {
                     write.xlsx2(as.data.frame(new_snapshot), paste0("Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx"), row.names = FALSE, showNA = FALSE)
                     cached$files <- list.files(pattern = "^[^~]*.xlsx")
                     files <- sort(cached$files, decreasing = TRUE)
