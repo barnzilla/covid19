@@ -23,11 +23,11 @@ ui <- navbarPage(
             uiOutput("snapshot"),
             uiOutput("age_group"),
             uiOutput("gender"),
-            uiOutput("hospitalized"),
-            uiOutput("icu"),
+            uiOutput("hospital_status"),
             uiOutput("death"),
-            uiOutput("exposure"),
+            uiOutput("transmission"),
             uiOutput("x_axis"),
+            uiOutput("x_axis_note"),
             width = 3
         ),
         mainPanel(
@@ -36,7 +36,7 @@ ui <- navbarPage(
                 ".shiny-output-error:before { visibility: hidden; }",
                 "a:hover { text-decoration: none !important; }"
             ),
-            div(tags$strong("Please use with caution: "), "this data is preliminary and subject to change. Please visit ", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310076601", target = "_blank", style = "color: #c27571; font-weight: bold; text-decoration: underline;", "this page"), "to learn more about the data.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
+            div(tags$strong("Please use with caution: "), "this data is preliminary and subject to change. Please visit ", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310078101", target = "_blank", style = "color: #c27571; font-weight: bold; text-decoration: underline;", "this page"), "to learn more about the data.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
             div(textOutput("case_count") %>% withSpinner(color = "#44ade9"), style = "font-weight: bold; font-size: 1.75rem; text-align: center;") %>% withSpinner(color = "#44ade9"), br(), br(),
             plotlyOutput("get_cumulative_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), br(),
             #plotlyOutput("get_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(),
@@ -49,6 +49,7 @@ ui <- navbarPage(
             uiOutput("age_group2"),
             uiOutput("snapshot2"),
             uiOutput("x_axis2"),
+            uiOutput("x_axis_note2"),
             width = 3
         ),
         mainPanel(
@@ -65,6 +66,7 @@ ui <- navbarPage(
     tabPanel("Data source",
         sidebarPanel(
          uiOutput("snapshot3"),
+         uiOutput("x_axis_note3"),
          width = 3
         ),
         mainPanel(
@@ -72,7 +74,7 @@ ui <- navbarPage(
                 ".shiny-output-error { visibility: hidden; }",
                 ".shiny-output-error:before { visibility: hidden; }"
             ),
-            div(tags$strong("Source: "), "Statistics Canada.", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310076601", target = "_blank", style = "color: #a99368; font-weight: bold; text-decoration: underline;", "Table  13-10-0766-01."), " Detailed confirmed cases of coronavirus disease (COVID-19) (Preliminary data), Public Health Agency of Canada.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
+            div(tags$strong("Source: "), "Statistics Canada.", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310078101", target = "_blank", style = "color: #a99368; font-weight: bold; text-decoration: underline;", "Table  13-10-07681-01."), " Detailed preliminary information on confirmed cases of COVID-19 (Revised), Public Health Agency of Canada.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
             DTOutput("get_data_source") %>% withSpinner(color = "#44ade9"), br(), br(),
             width = 9
         )
@@ -191,24 +193,20 @@ server <- function(input, output) {
         if(length(grep("\\All\\b", combo$gender)) == 0) {
             e2 <- "Gender %in% combo$gender &"
         }
-        if(length(grep("\\All\\b", combo$hospitalized)) == 0) {
-            e3 <- "Hospitalized %in% combo$hospitalized &"
-        }
-        if(length(grep("\\All\\b", combo$icu)) == 0) {
-            e4 <- "`Intensive Care Unit` %in% combo$icu &"
+        if(length(grep("\\All\\b", combo$hospital_status)) == 0) {
+            e3 <- "`Hospital Status` %in% combo$hospital_status &"
         }
         if(length(grep("\\All\\b", combo$death)) == 0) {
             e5 <- "Death %in% combo$death &"
         }
-        if(length(grep("\\All\\b", combo$exposure)) == 0) {
-            e6 <- "`Exposure Setting` %in% combo$exposure &"
+        if(length(grep("\\All\\b", combo$transmission)) == 0) {
+            e6 <- "`Transmission` %in% combo$transmission &"
         }
 
         if(length(e1) > 0 | length(e2) == 0 | length(e3) == 0 | length(e4) == 0 | length(e5) == 0 | length(e6) == 0) {
             e <- paste0("d %>% filter(", e1, e2, e3, e4, e5, e6, ")")
             e <- gsub("&)", ")", e)
 
-            #e <- paste0("d %>% filter(", e1, e2, ")", collapse = "")
             d <- eval(parse(text = e))
         }
 
@@ -231,10 +229,10 @@ server <- function(input, output) {
         crosstab <- crosstab %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
 
         # Create an age group vector
-        crosstab <- crosstab %>% mutate(`Age Group` = rep(combo$age_group, nrow(crosstab)), Gender = rep(combo$gender, nrow(crosstab)), Hospitalized = rep(combo$hospitalized, nrow(crosstab)), `Intensive Care Unit` = rep(combo$icu, nrow(crosstab)), Death = rep(combo$death, nrow(crosstab)), `Exposure Setting` = rep(combo$exposure, nrow(crosstab)))
+        crosstab <- crosstab %>% mutate(`Age Group` = rep(combo$age_group, nrow(crosstab)), Gender = rep(combo$gender, nrow(crosstab)), `Hospital Status` = rep(combo$hospital_status, nrow(crosstab)), Death = rep(combo$death, nrow(crosstab)), `Transmission` = rep(combo$transmission, nrow(crosstab)))
 
         # Reorder columns
-        crosstab <- crosstab %>% select(`Age Group`, Gender, Hospitalized, `Intensive Care Unit`, Death, `Exposure Setting`, everything())
+        crosstab <- crosstab %>% select(`Age Group`, Gender, `Hospital Status`, Death, `Transmission`, everything())
 
         # Add day column
         crosstab <- crosstab %>% mutate(Day = get_days(unlist(`Episode Date`), day1 = cached$day1))
@@ -294,7 +292,7 @@ server <- function(input, output) {
 
     # Print the number of cases selected
     output$case_count <- renderText({
-        if(is.null(cached$d) | is.null(input$age_group) | is.null(input$gender) | is.null(input$hospitalized) | is.null(input$icu) | is.null(input$death) | is.null(input$exposure)) {
+        if(is.null(cached$d) | is.null(input$age_group) | is.null(input$gender) | is.null(input$hospital_status) | is.null(input$death) | is.null(input$transmission)) {
             return()
         } else {
             if("All ages" %in% input$age_group) {
@@ -307,27 +305,22 @@ server <- function(input, output) {
             } else {
                 gender_selections <- input$gender
             }
-            if(input$hospitalized == "All conditions") {
-                hospital_selections <- unique(cached$d$Hospitalized)
+            if(input$hospital_status == "All conditions") {
+                hospital_selections <- unique(cached$d$`Hospital Status`)
             } else {
-                hospital_selections <- input$hospitalized
-            }
-            if(input$icu == "All conditions") {
-                icu_selections <- unique(cached$d$`Intensive Care Unit`)
-            } else {
-                icu_selections <- input$icu
+                hospital_selections <- input$hospital_status
             }
             if(input$death == "All conditions") {
                 death_selections <- unique(cached$d$Death)
             } else {
                 death_selections <- input$death
             }
-            if(input$exposure == "All conditions") {
-                exposure_selections <- unique(cached$d$`Exposure Setting`)
+            if(input$transmission == "All conditions") {
+                transmission_selections <- unique(cached$d$`Transmission`)
             } else {
-                exposure_selections <- input$exposure
+                transmission_selections <- input$transmission
             }
-            cases <- cached$d %>% filter(`Age Group` %in% age_selections & Gender %in% gender_selections & Hospitalized %in% hospital_selections & `Intensive Care Unit` %in% icu_selections & Death %in% death_selections & `Exposure Setting` %in% exposure_selections)
+            cases <- cached$d %>% filter(`Age Group` %in% age_selections & Gender %in% gender_selections & `Hospital Status` %in% hospital_selections & Death %in% death_selections & `Transmission` %in% transmission_selections)
             prop <- nrow(cases) / nrow(cached$d) * 100
             return(paste0(format(round(prop, 1), nsmall = 1), "% of cases (", format(nrow(cases), big.mark = ","), " out of ", format(nrow(cached$d), big.mark = ","), ") in this data snapshot match the current search criteria."))
         }
@@ -349,17 +342,17 @@ server <- function(input, output) {
     })
 
     # Build age group menu based on the number of available age groups
-    output$exposure <- renderUI({
+    output$transmission <- renderUI({
         d <- cached$d
         if(is.null(d)) {
             return()
         } else {
-            options <- factor(c("All conditions", d$`Exposure Setting`))
+            options <- factor(c("All conditions", d$`Transmission`))
             options <- relevel(options, ref = "All conditions")
             options <- levels(options)
             names(options) <- levels(options)
-            cached$exposure_options <- options
-            radioButtons("exposure", label = "Exposure settings", choices = options)
+            cached$transmission_options <- options
+            radioButtons("transmission", label = "Transmission", choices = options)
         }
     })
 
@@ -432,7 +425,7 @@ server <- function(input, output) {
     # Build cumulative incidence plot
     output$get_cumulative_incidence_plot <- renderPlotly({
         # generate bins based on input$bins from ui.R
-        combos <- expand.grid(list(age_group = input$age_group, gender = input$gender, hospitalized = input$hospitalized, icu = input$icu, death = input$death, exposure = input$exposure), KEEP.OUT.ATTRS = FALSE)
+        combos <- expand.grid(list(age_group = input$age_group, gender = input$gender, hospital_status = input$hospital_status, death = input$death, transmission = input$transmission), KEEP.OUT.ATTRS = FALSE)
         crosstab <- data.frame()
         for(row in 1:nrow(combos)) {
             crosstab <- rbind(crosstab, get_crosstab(combos[row,]))
@@ -482,7 +475,7 @@ server <- function(input, output) {
 
     # Render plot data in a searchable/sortable table
     output$get_plot_table <- renderDT(
-        cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & Hospitalized %in% input$hospitalized) %>% arrange(desc(Day)) %>% select(`Episode Date`, Day, Incidence, `Cumulative Incidence`, `Age Group`, Gender, everything()),
+        cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & `Hospital Status` %in% input$hospital_status) %>% arrange(desc(Day)) %>% select(`Episode Date`, Day, Incidence, `Cumulative Incidence`, `Age Group`, Gender, everything()),
         extensions = c("Buttons", "Scroller"),
         rownames = FALSE,
         options = list(
@@ -501,32 +494,17 @@ server <- function(input, output) {
     )
 
     # Build age group menu based on the number of available age groups
-    output$hospitalized <- renderUI({
+    output$hospital_status <- renderUI({
         d <- cached$d
         if(is.null(d)) {
             return()
         } else {
-            options <- factor(c("All conditions", d$Hospitalized))
+            options <- factor(c("All conditions", d$`Hospital Status`))
             options <- relevel(options, ref = "All conditions")
             options <- levels(options)
             names(options) <- levels(options)
             cached$hospital_options <- options
-            radioButtons("hospitalized", label = "Hospitalized", choices = options)
-        }
-    })
-
-    # Build age group menu based on the number of available age groups
-    output$icu <- renderUI({
-        d <- cached$d
-        if(is.null(d)) {
-            return()
-        } else {
-            options <- factor(c("All conditions", d$`Intensive Care Unit`))
-            options <- relevel(options, ref = "All conditions")
-            options <- levels(options)
-            names(options) <- levels(options)
-            cached$icu_options <- options
-            radioButtons("icu", label = "In intensive care", choices = options)
+            radioButtons("hospital_status", label = "Hospital status", choices = options)
         }
     })
 
@@ -541,9 +519,9 @@ server <- function(input, output) {
 
             # Check to see if new snapshot needs to be created
             now <- now(tzone = "UTC") - hours(4)
-            if (! paste0("Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & ! paste0("+Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
+            if (! paste0("Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & ! paste0("+Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
                 # Import a new snapshot
-                new_snapshot <- get_cansim("13-10-0766-01", refresh = TRUE)
+                new_snapshot <- get_cansim("13-10-0781-01", refresh = TRUE)
 
                 # Convert it to wide format
                 new_snapshot <- wrangle_data(new_snapshot)
@@ -554,9 +532,9 @@ server <- function(input, output) {
 
                 # If it's different from the last snapshot, store it and rebuild the snapshot menu
                 if(isTRUE(compare) | nrow(new_snapshot) == nrow(last_snapshot)) {
-                    write_xlsx(as.data.frame(new_snapshot), paste0("+Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx"))
+                    write_xlsx(as.data.frame(new_snapshot), paste0("+Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx"))
                 } else {
-                    write_xlsx(as.data.frame(new_snapshot), paste0("Table 13-10-0766-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx"))
+                    write_xlsx(as.data.frame(new_snapshot), paste0("Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx"))
                     cached$files <- list.files(pattern = "^[^~]*.xlsx")
                     files <- sort(cached$files, decreasing = TRUE)
                 }
@@ -599,9 +577,19 @@ server <- function(input, output) {
         if(is.null(d)) {
             return()
         } else {
-            options <- c("Episode date" = "Episode Date", "Day number since first case" = "Day")
+            options <- c("Episode date*" = "Episode Date", "Day number since first case" = "Day")
             cached$x_axis_options <- options
             radioButtons("x_axis", label = "Horizontal axis", choices = options)
+        }
+    })
+    
+    # Build x-axis note
+    output$x_axis_note <- renderUI({
+        d <- cached$d
+        if(is.null(d)) {
+            return()
+        } else {
+            div(tags$strong("* "), "This data contains only episode year and episode week. For each case, the first day of the case's episode week was assumed in order to create a complete episode date.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;")
         }
     })
 
@@ -611,9 +599,29 @@ server <- function(input, output) {
         if(is.null(d)) {
             return()
         } else {
-            options <- c("Episode date" = "Episode Date", "Day number since first case" = "Day")
+            options <- c("Episode date*" = "Episode Date", "Day number since first case" = "Day")
             cached$x_axis_options <- options
             radioButtons("x_axis2", label = "Horizontal axis", choices = options)
+        }
+    })
+    
+    # Build x-axis note
+    output$x_axis_note2 <- renderUI({
+        d <- cached$d
+        if(is.null(d)) {
+            return()
+        } else {
+            div(tags$strong("* "), "This data contains only episode year and episode week. For each case, the first day of the case's episode week was assumed in order to create a complete episode date.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;")
+        }
+    })
+    
+    # Build x-axis note
+    output$x_axis_note3 <- renderUI({
+        d <- cached$d
+        if(is.null(d)) {
+            return()
+        } else {
+            div(tags$strong("* "), "This data contains only episode year and episode week. For each case, the first day of the case's episode week was assumed in order to create a complete episode date.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;")
         }
     })
 
@@ -621,41 +629,41 @@ server <- function(input, output) {
     wrangle_data <- function(d) {
         # Reshape data from long to wide format
         d_wide <- spread(d %>% select("Case identifier number", "Case information", VALUE, REF_DATE), "Case information", VALUE)
-
+        
         # Add leading zeros to case identifier number
         d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
-
+        
         # Identify select vectors
-        vectors_to_factor <- c("Age group", "Gender", "Transmission", "Hospitalization", "Intensive care unit", "Death")
-
+        vectors_to_factor <- c("Age group", "Gender", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital status", "Recovered", "Death")
+        
         # Restructure as factors
         d_wide[vectors_to_factor] <- lapply(d_wide[vectors_to_factor], factor)
-
+        
         # Add semantic labels
-        d_wide$`Age group` <- revalue(d_wide$`Age group`, c("1" = "0-19", "2" = "20-29", "3" = "30-39", "4" = "40-49", "5" = "50-59", "6" = "60-69", "7" = "70-79", "8" = "80+", "99" = "Not stated"))
-        d_wide$Gender <- revalue(d_wide$Gender, c("1" = "Male", "2" = "Female", "3" = "Non-binary", "7" = "Non-binary", "9" = "Not stated"))
-        d_wide$Transmission <- revalue(d_wide$Transmission, c("1" = "Travel exposure", "2" = "Community exposure", "3" = "Pending", "9" = "Not stated"))
-        d_wide$Hospitalization <- revalue(d_wide$Hospitalization, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
-        d_wide$`Intensive care unit` <- revalue(d_wide$`Intensive care unit`, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
-        d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"))
-
-        # Add day, month and reference year vectors together and structure as a date object
-        d_wide$`Episode date` <- as.Date(paste0(d_wide$REF_DATE, "-", str_pad(d_wide$`Episode date - month`, 2, pad = "0"), "-", str_pad(d_wide$`Episode date - day`, 2, pad = "0")), format = "%Y-%m-%d")
-
+        d_wide$`Age group` <- revalue(d_wide$`Age group`, c("1" = "0-19", "2" = "20-29", "3" = "30-39", "4" = "40-49", "5" = "50-59", "6" = "60-69", "7" = "70-79", "8" = "80+", "99" = "Not stated"), warn_missing = FALSE)
+        d_wide$Gender <- revalue(d_wide$Gender, c("1" = "Male", "2" = "Female", "3" = "Non-binary", "7" = "Non-binary", "9" = "Not stated"), warn_missing = FALSE)
+        d_wide$Region <- revalue(d_wide$Region, c("1" = "Atlantic", "2" = "Quebec", "3" = "Ontario and Nunavut", "4" = "Prairies and the Northwest Territories", "5" = "British Columbia and Yukon"), warn_missing = FALSE)
+        d_wide$Occupation <- revalue(d_wide$Occupation, c("1" = "Health care worker", "2" = "School or daycare worker/attendee", "3" = "Long term care resident", "4" = "Other", "9" = "Not stated"), warn_missing = FALSE)
+        d_wide$Asymptomatic <- revalue(d_wide$Asymptomatic, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
+        d_wide$Transmission <- revalue(d_wide$Transmission, c("1" = "Domestic acquisition", "2" = "International travel", "9" = "Not stated"), warn_missing = FALSE)
+        d_wide$`Hospital status` <- revalue(d_wide$`Hospital status`, c("1" = "Hospitalized and in intensive care unit", "2" = "Hospitalized, but not in intensive care unit", "3" = "Not hospitalized", "9" = "Not stated/unknown"), warn_missing = FALSE)
+        d_wide$Recovered <- revalue(d_wide$Recovered, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
+        d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
+        
+        # Add day (select first day of the week since not given), month and reference year vectors together and structure as a date object
+        d_wide$`Episode date` <- as.Date(paste(d_wide$REF_DATE, str_pad(d_wide$`Episode week`, width = 2, pad = 0), 1, sep = "-"), "%Y-%U-%u")
+        
         # Change format to %d-%b-%y
-        d_wide$`Episode date` <- format(d_wide$`Episode date`, format = "%d-%b-%y")
-
+        d_wide$`Episode date` <- strftime(d_wide$`Episode date`, format = "%d-%b-%y")
+        
         # Remove unwanted vectors from data
-        d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", Transmission, Hospitalization, "Intensive care unit", Death)
-
+        d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Recovered, Death)
+        
         # Rename vectors
-        names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Exposure Setting", "Hospitalized", "Intensive Care Unit", "Death")
-
+        names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Region", "Occupation", "Asymptomatic", "Exposure Setting", "Hospitalized", "Recovered", "Death")
+        
         # Order data by case ids in ascending order
         d_wide <- d_wide %>% arrange(CaseID)
-
-        # Export data to Excel
-        #write.xlsx2(as.data.frame(d_wide), paste0("Table 13-10-0766-01 - updated ", format(Sys.time(), "%Y-%m-%d"), ".xlsx"), row.names = FALSE, showNA = FALSE)
 
         return(d_wide)
     }
