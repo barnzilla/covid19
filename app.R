@@ -74,21 +74,21 @@ ui <- navbarPage(
                 ".shiny-output-error { visibility: hidden; }",
                 ".shiny-output-error:before { visibility: hidden; }"
             ),
-            div(tags$strong("Source: "), "Statistics Canada.", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310078101", target = "_blank", style = "color: #a99368; font-weight: bold; text-decoration: underline;", "Table  13-10-07681-01."), " Detailed preliminary information on confirmed cases of COVID-19 (Revised), Public Health Agency of Canada.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
+            div(tags$strong("Source: "), "Statistics Canada.", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310078101", target = "_blank", style = "color: #a99368; font-weight: bold; text-decoration: underline;", "Table  13-10-0781-01."), " Detailed preliminary information on confirmed cases of COVID-19 (Revised), Public Health Agency of Canada.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
             DTOutput("get_data_source") %>% withSpinner(color = "#44ade9"), br(), br(),
             width = 9
         )
-    ),
-    tabPanel("About",
-        mainPanel(
-            tags$style(type="text/css",
-                ".shiny-output-error { visibility: hidden; }",
-                ".shiny-output-error:before { visibility: hidden; }"
-            ),
-            p("This R Shiny app was developed by ", tags$a(href = "https://www.barnzilla.ca", target = "_blank", "Joel Barnes.")), br(),
-            width = 12
-        )
     )
+    #tabPanel("About",
+        #mainPanel(
+            #tags$style(type="text/css",
+                #".shiny-output-error { visibility: hidden; }",
+                #".shiny-output-error:before { visibility: hidden; }"
+            #),
+            #p("This R Shiny app was developed by ", tags$a(href = "https://www.barnzilla.ca", target = "_blank", "Joel Barnes.")), br(),
+            #width = 12
+        #)
+    #)
 )
 
 # Define server logic
@@ -660,7 +660,7 @@ server <- function(input, output) {
         d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Recovered, Death)
         
         # Rename vectors
-        names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Region", "Occupation", "Asymptomatic", "Exposure Setting", "Hospitalized", "Recovered", "Death")
+        names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital Status", "Recovered", "Death")
         
         # Order data by case ids in ascending order
         d_wide <- d_wide %>% arrange(CaseID)
