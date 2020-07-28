@@ -519,7 +519,8 @@ server <- function(input, output) {
 
             # Check to see if new snapshot needs to be created
             now <- now(tzone = "UTC") - hours(4)
-            if (! paste0("Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & ! paste0("+Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
+            lookup <- get_cansim_changed_tables(Sys.Date())
+            if ("13100781" %in% lookup$productId & ! paste0("Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & ! paste0("+Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
                 # Import a new snapshot
                 new_snapshot <- get_cansim("13-10-0781-01", refresh = TRUE)
 
@@ -582,7 +583,7 @@ server <- function(input, output) {
             radioButtons("x_axis", label = "Horizontal axis", choices = options)
         }
     })
-    
+
     # Build x-axis note
     output$x_axis_note <- renderUI({
         d <- cached$d
@@ -604,7 +605,7 @@ server <- function(input, output) {
             radioButtons("x_axis2", label = "Horizontal axis", choices = options)
         }
     })
-    
+
     # Build x-axis note
     output$x_axis_note2 <- renderUI({
         d <- cached$d
@@ -614,7 +615,7 @@ server <- function(input, output) {
             div(tags$strong("* "), "This data contains only episode year and episode week. For each case, the first day of the case's episode week was assumed in order to create a complete episode date.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;")
         }
     })
-    
+
     # Build x-axis note
     output$x_axis_note3 <- renderUI({
         d <- cached$d
@@ -629,16 +630,16 @@ server <- function(input, output) {
     wrangle_data <- function(d) {
         # Reshape data from long to wide format
         d_wide <- spread(d %>% select("Case identifier number", "Case information", VALUE, REF_DATE), "Case information", VALUE)
-        
+
         # Add leading zeros to case identifier number
         d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
-        
+
         # Identify select vectors
         vectors_to_factor <- c("Age group", "Gender", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital status", "Recovered", "Death")
-        
+
         # Restructure as factors
         d_wide[vectors_to_factor] <- lapply(d_wide[vectors_to_factor], factor)
-        
+
         # Add semantic labels
         d_wide$`Age group` <- revalue(d_wide$`Age group`, c("1" = "0-19", "2" = "20-29", "3" = "30-39", "4" = "40-49", "5" = "50-59", "6" = "60-69", "7" = "70-79", "8" = "80+", "99" = "Not stated"), warn_missing = FALSE)
         d_wide$Gender <- revalue(d_wide$Gender, c("1" = "Male", "2" = "Female", "3" = "Non-binary", "7" = "Non-binary", "9" = "Not stated"), warn_missing = FALSE)
@@ -649,19 +650,19 @@ server <- function(input, output) {
         d_wide$`Hospital status` <- revalue(d_wide$`Hospital status`, c("1" = "Hospitalized and in intensive care unit", "2" = "Hospitalized, but not in intensive care unit", "3" = "Not hospitalized", "9" = "Not stated/unknown"), warn_missing = FALSE)
         d_wide$Recovered <- revalue(d_wide$Recovered, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
         d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
-        
+
         # Add day (select first day of the week since not given), month and reference year vectors together and structure as a date object
         d_wide$`Episode date` <- as.Date(paste(d_wide$REF_DATE, str_pad(d_wide$`Episode week`, width = 2, pad = 0), 1, sep = "-"), "%Y-%U-%u")
-        
+
         # Change format to %d-%b-%y
         d_wide$`Episode date` <- strftime(d_wide$`Episode date`, format = "%d-%b-%y")
-        
+
         # Remove unwanted vectors from data
         d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Recovered, Death)
-        
+
         # Rename vectors
         names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital Status", "Recovered", "Death")
-        
+
         # Order data by case ids in ascending order
         d_wide <- d_wide %>% arrange(CaseID)
 
