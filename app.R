@@ -519,8 +519,11 @@ server <- function(input, output) {
 
             # Check to see if new snapshot needs to be created
             now <- now(tzone = "UTC") - hours(4)
-            lookup <- get_cansim_changed_tables(Sys.Date())
-            if ("13100781" %in% lookup$productId & ! paste0("Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & ! paste0("+Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
+            
+            # Check if shiny app is running on local server (don't want to get new data if on a production server)
+            on_localhost <- Sys.getenv('SHINY_PORT') == ""
+            
+            if (on_localhost & ! paste0("Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & ! paste0("+Table 13-10-0781-01 - updated ", format(now, "%Y-%m-%d"), ".xlsx") %in% list.files() & as.integer(format(now, "%H")) >= 9) {
                 # Import a new snapshot
                 new_snapshot <- get_cansim("13-10-0781-01", refresh = TRUE)
 
