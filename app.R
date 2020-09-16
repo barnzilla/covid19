@@ -43,52 +43,7 @@ ui <- navbarPage(
             DTOutput("get_plot_table") %>% withSpinner(color = "#44ade9"), br(), br(),
             width = 9
         )
-    ),
-    tabPanel("Compare data snapshots",
-        sidebarPanel(
-            uiOutput("age_group2"),
-            uiOutput("snapshot2"),
-            uiOutput("x_axis2"),
-            uiOutput("x_axis_note2"),
-            width = 3
-        ),
-        mainPanel(
-            tags$style(type="text/css",
-                ".shiny-output-error { visibility: hidden; }",
-                ".shiny-output-error:before { visibility: hidden; }"
-            ),
-            div(tags$strong("Note: "), "at least two data snapshots must be selected to make a comparison.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(),
-            plotlyOutput("get_comparison_plot") %>% withSpinner(color = "#44ade9"), br(), br(),
-            #DTOutput("get_comparison_table") %>% withSpinner(color = "#44ade9"), br(), br(),
-            width = 9
-        )
-    ),
-    tabPanel("Data source",
-        sidebarPanel(
-         uiOutput("snapshot3"),
-         uiOutput("x_axis_note3"),
-         width = 3
-        ),
-        mainPanel(
-            tags$style(type="text/css",
-                ".shiny-output-error { visibility: hidden; }",
-                ".shiny-output-error:before { visibility: hidden; }"
-            ),
-            div(tags$strong("Source: "), "Statistics Canada.", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310078101", target = "_blank", style = "color: #a99368; font-weight: bold; text-decoration: underline;", "Table  13-10-0781-01."), " Detailed preliminary information on confirmed cases of COVID-19 (Revised), Public Health Agency of Canada.", style = "background-color: #fcf9e7; color: #a99368; border: 1px solid #faefd4; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
-            DTOutput("get_data_source") %>% withSpinner(color = "#44ade9"), br(), br(),
-            width = 9
-        )
     )
-    #tabPanel("About",
-        #mainPanel(
-            #tags$style(type="text/css",
-                #".shiny-output-error { visibility: hidden; }",
-                #".shiny-output-error:before { visibility: hidden; }"
-            #),
-            #p("This R Shiny app was developed by ", tags$a(href = "https://www.barnzilla.ca", target = "_blank", "Joel Barnes.")), br(),
-            #width = 12
-        #)
-    #)
 )
 
 # Define server logic
