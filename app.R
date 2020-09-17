@@ -351,7 +351,7 @@ server <- function(input, output) {
                 cached$crosstab <- crosstab
                 point_size <- 1
                 element_text_size <- 12
-                x_label <- "Month"
+                x_label <- "Date"
                 ggplotly(ggplot(crosstab, aes(x = Month, y = `Sum`, group = `Age Group`)) +
                  geom_point(stat = "summary", aes(color = `Age Group`), size = point_size) +
                  stat_summary(fun = sum, geom = "line", aes(color = `Age Group`)) +
