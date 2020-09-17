@@ -374,7 +374,7 @@ server <- function(input, output) {
                 ggplotly(ggplot(crosstab, aes(x = !!rlang::sym(input$x_axis), y = `Cumulative Sum`)) +
                  geom_line(aes(color = `Age Group`), size = point_size) +
                  xlab(x_label) +
-                 ylab("Cumulative sum by day") +
+                 ylab("Cumulative sum of cases") +
                  scale_y_continuous(labels = comma) +
                  theme_minimal() +
                  theme(
