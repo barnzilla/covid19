@@ -21,6 +21,7 @@ ui <- navbarPage(
     tabPanel("Home",
         sidebarPanel(
             uiOutput("snapshot"),
+            uiOutput("summary_type"),
             uiOutput("age_group"),
             uiOutput("gender"),
             uiOutput("hospital_status"),
@@ -38,7 +39,7 @@ ui <- navbarPage(
             ),
             div(tags$strong("Please use with caution: "), "this data is preliminary and subject to change. Please visit ", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310078101", target = "_blank", style = "color: #c27571; font-weight: bold; text-decoration: underline;", "this page"), "to learn more about the data.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
             div(textOutput("case_count") %>% withSpinner(color = "#44ade9"), style = "font-weight: bold; font-size: 1.75rem; text-align: center;") %>% withSpinner(color = "#44ade9"), br(), br(),
-            plotlyOutput("get_cumulative_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(), br(),
+            plotlyOutput("get_line_plot") %>% withSpinner(color = "#44ade9"), br(), br(), br(),
             #plotlyOutput("get_incidence_plot") %>% withSpinner(color = "#44ade9"), br(), br(),
             DTOutput("get_plot_table") %>% withSpinner(color = "#44ade9"), br(), br(),
             width = 9
@@ -178,10 +179,10 @@ server <- function(input, output) {
         crosstab <- d %>% group_by(`Episode Date`) %>% tally()
 
         # Rename the n vector
-        names(crosstab)[ncol(crosstab)] <- "Incidence"
+        names(crosstab)[ncol(crosstab)] <- "Sum"
 
         # Compute cumulative incidence
-        crosstab <- crosstab %>% mutate(`Cumulative Incidence` = cumsum(Incidence))
+        crosstab <- crosstab %>% mutate(`Cumulative Sum` = cumsum(Sum))
 
         # Create an age group vector
         crosstab <- crosstab %>% mutate(`Age Group` = rep(combo$age_group, nrow(crosstab)), Gender = rep(combo$gender, nrow(crosstab)), `Hospital Status` = rep(combo$hospital_status, nrow(crosstab)), Death = rep(combo$death, nrow(crosstab)), `Transmission` = rep(combo$transmission, nrow(crosstab)))
@@ -311,7 +312,7 @@ server <- function(input, output) {
         }
     })
 
-    # Build age group menu based on the number of available age groups
+    # Build gender menu based on the number of available age groups
     output$gender <- renderUI({
         d <- cached$d
         if(is.null(d)) {
@@ -326,59 +327,8 @@ server <- function(input, output) {
         }
     })
 
-    # Render plot data in a searchable/sortable table
-    output$get_comparison_table <- renderDT(
-        #cached$comparison_data %>% filter(`Age Group` %in% input$age_group2) %>% arrange(desc(Day)) %>% select(`Age Group`, `Episode Date`, Day, Snapshot, everything()),
-        cached$comparison_data,
-        extensions = c("Buttons", "Scroller"),
-        rownames = FALSE,
-        options = list(
-            columnDefs = list(list(visible = FALSE, targets = c())),
-            pageLength = 50,
-            dom = "Bfrtip",
-            buttons = c("colvis", "copy", "csv", "excel", "pdf"),
-            deferRender = TRUE,
-            searchDelay = 500,
-            initComplete = JS(
-                "function(settings, json) {",
-                "$(this.api().table().header()).css({'background-color': '#fff', 'color': '#111'});",
-                "}"
-            )
-        )
-    )
-
-    # Build comparison plot
-    output$get_comparison_plot <- renderPlotly({
-        # generate bins based on input$bins from ui.R
-        if(is.null(input$snapshot2) | length(input$snapshot2) < 2 | is.null(input$age_group2)) {
-            return()
-        } else {
-            d <- tibble()
-            for(i in 1:length(input$snapshot2)) {
-                d <- rbind(d, get_comparison_data(input$snapshot2[i])$crosstab)
-            }
-            cached$comparison_data <- d
-            point_size <- 0.5
-            element_text_size <- 12
-            x_label <- ifelse(input$x_axis2 == "Day", "Day number (since first case)", "Date")
-            ggplotly(ggplot(d %>% filter(`Age Group` %in% input$age_group2), aes(x = !!rlang::sym(input$x_axis2), y = `Cumulative Incidence`)) +
-                geom_line(aes(color = Snapshot), size = point_size) +
-                xlab(x_label) +
-                ylab("Cumulative incidence") +
-                scale_y_continuous(labels = comma) +
-                theme_minimal() +
-                theme(
-                    plot.title = element_text(size = element_text_size),
-                    axis.title.x = element_text(size = element_text_size),
-                    axis.title.y = element_text(size = element_text_size),
-                    legend.text = element_text(size = element_text_size),
-                    legend.title = element_blank()
-                ))
-        }
-    })
-
-    # Build cumulative incidence plot
-    output$get_cumulative_incidence_plot <- renderPlotly({
+    # Build line plot
+    output$get_line_plot <- renderPlotly({
         # generate bins based on input$bins from ui.R
         combos <- expand.grid(list(age_group = input$age_group, gender = input$gender, hospital_status = input$hospital_status, death = input$death, transmission = input$transmission), KEEP.OUT.ATTRS = FALSE)
         crosstab <- data.frame()
@@ -388,54 +338,70 @@ server <- function(input, output) {
         if(is.null(crosstab) | is.null(input$age_group) | is.null(input$gender)) {
             return()
         } else {
-            cached$crosstab <- crosstab
-            point_size <- 0.5
-            element_text_size <- 12
-            x_label <- ifelse(input$x_axis == "Day", "Day number (since first case)", "Date")
-            ggplotly(ggplot(crosstab, aes(x = !!rlang::sym(input$x_axis), y = `Cumulative Incidence`)) +
-            geom_line(aes(color = `Age Group`), size = point_size) +
-            xlab(x_label) +
-            ylab("Cumulative incidence") +
-            scale_y_continuous(labels = comma) +
-            theme_minimal() +
-            theme(
-                plot.title = element_text(size = element_text_size),
-                axis.title.x = element_text(size = element_text_size),
-                axis.title.y = element_text(size = element_text_size),
-                legend.text = element_text(size = element_text_size),
-                legend.title = element_blank()
-            ))
+            if(input$summary_type == "Monthly sum") {
+                lookup <- data.frame(
+                    short = c(paste0("0", 1:9), 10:12),
+                    long = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                )
+                crosstab$Month <- substr(crosstab$`Episode Date`, 6, 7)
+                crosstab$Month <- unname(sapply(crosstab$Month, function(x) lookup$long[lookup$short == x]))
+                crosstab$Month <- factor(crosstab$Month, levels = lookup$long)
+                crosstab <- crosstab %>% group_by(Month, `Age Group`, Gender, `Hospital Status`, Death, Transmission) %>% tally(Sum)
+                names(crosstab)[ncol(crosstab)] <- "Monthly Sum"
+                cached$crosstab <- crosstab
+                point_size <- 1
+                element_text_size <- 12
+                x_label <- "Month"
+                ggplotly(ggplot(crosstab, aes(x = Month, y = `Monthly Sum`, group = `Age Group`)) +
+                 geom_point(stat = "summary", aes(color = `Age Group`), size = point_size) +
+                 stat_summary(fun = sum, geom = "line", aes(color = `Age Group`)) +
+                 xlab(x_label) +
+                 ylab("Sum of cases") +
+                 scale_y_continuous(labels = comma) +
+                 theme_minimal() +
+                 theme(
+                     plot.title = element_text(size = element_text_size),
+                     axis.title.x = element_text(size = element_text_size),
+                     axis.title.y = element_text(size = element_text_size),
+                     legend.text = element_text(size = element_text_size),
+                     legend.title = element_blank()
+                 ))
+            } else {
+                cached$crosstab <- crosstab
+                point_size <- 0.5
+                element_text_size <- 12
+                x_label <- ifelse(input$x_axis == "Day", "Day number (since first case)", "Date")
+                ggplotly(ggplot(crosstab, aes(x = !!rlang::sym(input$x_axis), y = `Cumulative Sum`)) +
+                 geom_line(aes(color = `Age Group`), size = point_size) +
+                 xlab(x_label) +
+                 ylab("Cumulative sum by day") +
+                 scale_y_continuous(labels = comma) +
+                 theme_minimal() +
+                 theme(
+                     plot.title = element_text(size = element_text_size),
+                     axis.title.x = element_text(size = element_text_size),
+                     axis.title.y = element_text(size = element_text_size),
+                     legend.text = element_text(size = element_text_size),
+                     legend.title = element_blank()
+                 ))
+            }
         }
     })
 
     # Render plot data in a searchable/sortable table
-    output$get_data_source <- renderDT(
-        get_data(input$snapshot3),
-        extensions = c("Buttons", "Scroller"),
-        rownames = FALSE,
-        options = list(
-            columnDefs = list(list(visible = FALSE, targets = c())),
-            pageLength = 50,
-            dom = "Bfrtip",
-            buttons = c("colvis", "copy", "csv", "excel", "pdf"),
-            deferRender = TRUE,
-            searchDelay = 500,
-            initComplete = JS(
-                "function(settings, json) {",
-                "$(this.api().table().header()).css({'background-color': '#fff', 'color': '#111'});",
-                "}"
-            )
-        )
-    )
-
-    # Render plot data in a searchable/sortable table
     output$get_plot_table <- renderDT(
-        cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & `Hospital Status` %in% input$hospital_status) %>% arrange(desc(Day)) %>% select(`Episode Date`, Day, Incidence, `Cumulative Incidence`, `Age Group`, Gender, everything()),
+        {
+            if(input$summary_type == "Monthly sum") {
+                cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & `Hospital Status` %in% input$hospital_status) %>% arrange(desc(Month)) %>% select(Month, `Monthly Sum`, `Age Group`, Gender, everything())
+            } else {
+                cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & `Hospital Status` %in% input$hospital_status) %>% arrange(desc(Day)) %>% select(`Episode Date`, Day, Sum, `Cumulative Sum`, `Age Group`, Gender, everything())
+            }
+        },
         extensions = c("Buttons", "Scroller"),
         rownames = FALSE,
         options = list(
             columnDefs = list(list(visible = FALSE, targets = c())),
-            pageLength = 10,
+            pageLength = 500,
             dom = "Bfrtip",
             buttons = c("colvis", "copy", "csv", "excel", "pdf"),
             deferRender = TRUE,
@@ -510,30 +476,21 @@ server <- function(input, output) {
             selectInput("snapshot", "Data snapshots", choices = files)
         }
     })
-
-    # Build data snapshot menu based on the number of snapshots available
-    output$snapshot2 <- renderUI({
-        if(is.null(cached$files)) {
+    
+    # Build summary type menu 
+    output$summary_type <- renderUI({
+        d <- cached$d
+        if(is.null(d)) {
             return()
         } else {
-            checkboxGroupInput("snapshot2", label = "Data snapshots", choices = cached$files2, selected = c(input$snapshot))
-        }
-    })
-
-    # Build data snapshot menu based on the number of snapshots available
-    output$snapshot3 <- renderUI({
-        cached$files <- list.files(pattern = "*.xlsx")
-        if (is.null(cached$files)) {
-            return()
-        } else {
-            selectInput("snapshot3", "Data snapshots", choices = cached$files2)
+            radioButtons("summary_type", label = "Summary type", choices = c("Daily cumulative sum", "Monthly sum"))
         }
     })
 
     # Build x-axis menu
     output$x_axis <- renderUI({
         d <- cached$d
-        if(is.null(d)) {
+        if(is.null(d) | input$summary_type == "Monthly sum") {
             return()
         } else {
             options <- c("Episode date*" = "Episode Date", "Day number since first case" = "Day")
@@ -544,38 +501,6 @@ server <- function(input, output) {
 
     # Build x-axis note
     output$x_axis_note <- renderUI({
-        d <- cached$d
-        if(is.null(d)) {
-            return()
-        } else {
-            div(tags$strong("* "), "This data contains only episode year and episode week. For each case, the first day of the case's episode week was assumed in order to create a complete episode date.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;")
-        }
-    })
-
-    # Build x-axis menu
-    output$x_axis2 <- renderUI({
-        d <- cached$d
-        if(is.null(d)) {
-            return()
-        } else {
-            options <- c("Episode date*" = "Episode Date", "Day number since first case" = "Day")
-            cached$x_axis_options <- options
-            radioButtons("x_axis2", label = "Horizontal axis", choices = options)
-        }
-    })
-
-    # Build x-axis note
-    output$x_axis_note2 <- renderUI({
-        d <- cached$d
-        if(is.null(d)) {
-            return()
-        } else {
-            div(tags$strong("* "), "This data contains only episode year and episode week. For each case, the first day of the case's episode week was assumed in order to create a complete episode date.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;")
-        }
-    })
-
-    # Build x-axis note
-    output$x_axis_note3 <- renderUI({
         d <- cached$d
         if(is.null(d)) {
             return()
