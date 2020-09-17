@@ -338,7 +338,7 @@ server <- function(input, output) {
         if(is.null(crosstab) | is.null(input$age_group) | is.null(input$gender)) {
             return()
         } else {
-            if(input$summary_type == "Monthly sum") {
+            if(input$summary_type == "Sum by month") {
                 lookup <- data.frame(
                     short = c(paste0("0", 1:9), 10:12),
                     long = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
@@ -347,12 +347,12 @@ server <- function(input, output) {
                 crosstab$Month <- unname(sapply(crosstab$Month, function(x) lookup$long[lookup$short == x]))
                 crosstab$Month <- factor(crosstab$Month, levels = lookup$long)
                 crosstab <- crosstab %>% group_by(Month, `Age Group`, Gender, `Hospital Status`, Death, Transmission) %>% tally(Sum)
-                names(crosstab)[ncol(crosstab)] <- "Monthly Sum"
+                names(crosstab)[ncol(crosstab)] <- "Sum"
                 cached$crosstab <- crosstab
                 point_size <- 1
                 element_text_size <- 12
                 x_label <- "Month"
-                ggplotly(ggplot(crosstab, aes(x = Month, y = `Monthly Sum`, group = `Age Group`)) +
+                ggplotly(ggplot(crosstab, aes(x = Month, y = `Sum`, group = `Age Group`)) +
                  geom_point(stat = "summary", aes(color = `Age Group`), size = point_size) +
                  stat_summary(fun = sum, geom = "line", aes(color = `Age Group`)) +
                  xlab(x_label) +
@@ -391,8 +391,8 @@ server <- function(input, output) {
     # Render plot data in a searchable/sortable table
     output$get_plot_table <- renderDT(
         {
-            if(input$summary_type == "Monthly sum") {
-                cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & `Hospital Status` %in% input$hospital_status) %>% arrange(desc(Month)) %>% select(Month, `Monthly Sum`, `Age Group`, Gender, everything())
+            if(input$summary_type == "Sum by month") {
+                cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & `Hospital Status` %in% input$hospital_status) %>% arrange(desc(Month)) %>% select(Month, Sum, `Age Group`, Gender, everything())
             } else {
                 cached$crosstab %>% filter(`Age Group` %in% input$age_group & Gender %in% input$gender & `Hospital Status` %in% input$hospital_status) %>% arrange(desc(Day)) %>% select(`Episode Date`, Day, Sum, `Cumulative Sum`, `Age Group`, Gender, everything())
             }
@@ -483,7 +483,7 @@ server <- function(input, output) {
         if(is.null(d)) {
             return()
         } else {
-            radioButtons("summary_type", label = "Summary type", choices = c("Daily cumulative sum", "Monthly sum"))
+            radioButtons("summary_type", label = "Summary type", choices = c("Cumulative sum by day", "Sum by month"))
         }
     })
 
