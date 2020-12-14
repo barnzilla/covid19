@@ -1,13 +1,13 @@
 # Load the packages
-library("dplyr")
-library("DT")
-library("ggplot2")
-library("htmlwidgets")
-library("plotly")
-library("scales")
-library("shiny")
-library("shinycssloaders")
-library("shinythemes")
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(htmlwidgets)
+library(plotly)
+library(scales)
+library(shiny)
+library(shinycssloaders)
+library(shinythemes)
 
 # Define UI
 ui <- navbarPage(
@@ -26,6 +26,7 @@ ui <- navbarPage(
      uiOutput("occupation"),
      uiOutput("region"),
      uiOutput("transmission"),
+     uiOutput("x_axis_note"),
      width = 3
    ),
    mainPanel(
@@ -48,7 +49,7 @@ server <- function(input, output) {
   # Get a data snapshot
   get_data <- function(x) {
     d <- readRDS(paste0("data/", x))
-    d <- d[order(d$`Episode Date`),]
+    d <- d[order(d$`Episode date`),]
     return(d)
   }
 
@@ -58,7 +59,7 @@ server <- function(input, output) {
       return()
     } else {
       d <- get_data(input$snapshot)
-      options <- factor(d$`Age Group`)
+      options <- factor(d$`Age group`)
       options <- levels(options)
       names(options) <- levels(options)
       checkboxGroupInput("age_group", label = "Age groups", choices = options, selected = options[options != "Not stated"])
@@ -106,17 +107,17 @@ server <- function(input, output) {
 
       # Subset data
       d <- d %>% filter(
-        `Age Group` %in% input$age_group,
+        `Age group` %in% input$age_group,
         `Death` %in% input$death,
         `Gender` %in% input$gender,
-        `Hospital Status` %in% input$hospital_status,
+        `Hospital status` %in% input$hospital_status,
         `Occupation` %in% input$occupation,
         `Region` %in% input$region,
         `Transmission` %in% input$transmission
       )
 
       # Create a crosstab
-      l <- paste0("list(d$`Episode Date`, d$`", input$grouping_variable, "`)")
+      l <- paste0("list(d$`Episode date`, d$`", input$grouping_variable, "`)")
       crosstab <- aggregate(
         d$Counts,
         eval(parse(text = l)),
@@ -130,7 +131,7 @@ server <- function(input, output) {
       )
 
       # Rename columns
-      variable_names <- paste0('c("Episode Date", "', input$grouping_variable, '", "Counts", "Cumulative Counts")')
+      variable_names <- paste0('c("Episode date", "', input$grouping_variable, '", "Counts", "Cumulative Counts")')
       names(crosstab) <- eval(parse(text = variable_names))
 
       # If user wants cumulative sum, update the crosstab
@@ -139,11 +140,11 @@ server <- function(input, output) {
         y_label <- "Cumulative cases"
       } else {
         y_variable <- "Counts"
-        y_label <- "New Cases"
+        y_label <- "New cases"
       }
 
       # Render plot
-      ggplotly(ggplot(crosstab, aes(x = `Episode Date`, y = !!rlang::sym(y_variable), group = !!rlang::sym(input$grouping_variable))) +
+      ggplotly(ggplot(crosstab, aes(x = `Episode date`, y = !!rlang::sym(y_variable), group = !!rlang::sym(input$grouping_variable))) +
       geom_line(aes(color = !!rlang::sym(input$grouping_variable)), size = point_size) +
       xlab(x_label) +
        ylab(y_label) +
@@ -166,10 +167,10 @@ server <- function(input, output) {
       return()
     } else {
       d <- get_data(input$snapshot)
-      options <- factor(names(d %>% select(-`Episode Date`, -Counts)))
+      options <- factor(names(d %>% select(-`Episode date`, -Counts)))
       options <- levels(options)
       names(options) <- levels(options)
-      selectInput("grouping_variable", label = "Group by", choices = options, selected = "Age Group")
+      selectInput("grouping_variable", label = "Group by", choices = options, selected = options[1])
     }
   })
 
@@ -179,7 +180,7 @@ server <- function(input, output) {
       return()
     } else {
       d <- get_data(input$snapshot)
-      options <- factor(d$`Hospital Status`)
+      options <- factor(d$`Hospital status`)
       options <- levels(options)
       names(options) <- levels(options)
       checkboxGroupInput("hospital_status", label = "Hospital Status", choices = options, selected = options)
@@ -261,6 +262,15 @@ server <- function(input, output) {
       options <- levels(options)
       names(options) <- levels(options)
       checkboxGroupInput("transmission", label = "Transmission", choices = options, selected = options)
+    }
+  })
+
+  # Build x-axis note
+  output$x_axis_note <- renderUI({
+    if(is.null(input$snapshot)) {
+      return()
+    } else {
+      div(tags$strong("* "), "This data contains only episode year and episode week. For each case, the first day of the case's episode week was assumed in order to create a complete episode date.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;")
     }
   })
 

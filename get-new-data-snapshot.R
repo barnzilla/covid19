@@ -1,11 +1,10 @@
 # Load dependencies
-library(cansim); library(dplyr); library(stringr); library(tidyr)
+library(cansim); library(dplyr); library(plyr); library(stringr); library(readr); library(tidyr)
 
 # Helper functions
 # Wrangle the raw data
 wrangle_data <- function(d) {
-  # Reshape data from long to wide format
-  d_wide <- spread(d %>% select("Case identifier number", "Case information", VALUE, REF_DATE), "Case information", VALUE)
+  d_wide <- d %>% filter(`Episode week` != 99)
 
   # Add leading zeros to case identifier number
   d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
@@ -28,7 +27,7 @@ wrangle_data <- function(d) {
   d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
 
   # Add day (select first day of the week since not given), month and reference year vectors together and structure as a date object
-  d_wide$`Episode date` <- as.Date(paste(d_wide$REF_DATE, str_pad(d_wide$`Episode week`, width = 2, pad = 0), 1, sep = "-"), "%Y-%U-%u")
+  d_wide$`Episode date` <- as.Date(paste(d_wide$`Episode year`, str_pad(d_wide$`Episode week`, width = 2, pad = 0), 1, sep = "-"), "%Y-%U-%u")
 
   # Change format to %d-%b-%y
   d_wide$`Episode date` <- strftime(d_wide$`Episode date`, format = "%d-%b-%y")
@@ -36,34 +35,34 @@ wrangle_data <- function(d) {
   # Remove unwanted vectors from data
   d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Recovered, Death)
 
-  # Rename vectors
-  names(d_wide) <- c("CaseID", "Episode Date", "Gender", "Age Group", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital Status", "Recovered", "Death")
-
   # Order data by case ids in ascending order
-  d_wide <- d_wide %>% arrange(CaseID)
+  d_wide <- d_wide %>% arrange(`Case identifier number`)
 
   return(d_wide)
 }
 
-# Import CANSIM data
-d <- get_cansim("13-26-0002", refresh = TRUE)
+# Set working directory
+setwd("c:/users/joelb/onedrive/github/covid19")
+
+# Import data
+d <- read_csv(paste0(getwd(), "/data/raw-data/", list.files(paste0(getwd(), "/data/raw-data"))[1]))
 
 # Wrangle data
 new_snapshot <- wrangle_data(d)
 
 # Convert `Episode Date` to date object
-new_snapshot$`Episode Date` <- as.Date(new_snapshot$`Episode Date`, "%d-%b-%y")
+new_snapshot$`Episode date` <- as.Date(new_snapshot$`Episode date`, "%d-%b-%y")
 
 # Create aggregate data
 aggregate_data <- aggregate(
-  new_snapshot$CaseID,
+  new_snapshot$`Case identifier number`,
   list(
-    new_snapshot$`Episode Date`,
-    new_snapshot$`Age Group`,
+    new_snapshot$`Episode date`,
+    new_snapshot$`Age group`,
     new_snapshot$Gender,
     new_snapshot$Region,
     new_snapshot$Occupation,
-    new_snapshot$`Hospital Status`,
+    new_snapshot$`Hospital status`,
     new_snapshot$Death,
     new_snapshot$Transmission
   ),
@@ -72,12 +71,12 @@ aggregate_data <- aggregate(
 
 # Update names in aggregate_data
 names(aggregate_data) <- c(
-  "Episode Date",
-  "Age Group",
+  "Episode date",
+  "Age group",
   "Gender",
   "Region",
   "Occupation",
-  "Hospital Status",
+  "Hospital status",
   "Death",
   "Transmission",
   "Counts"
@@ -87,4 +86,4 @@ names(aggregate_data) <- c(
 aggregate_data[-c(1, ncol(aggregate_data))] <- lapply(aggregate_data[-c(1, ncol(aggregate_data))], as.character)
 
 # Export data
-saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-", Sys.Date(), ".Rdata"), compress = "xz")
+saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-2020-12-10.Rdata"), compress = "xz")
