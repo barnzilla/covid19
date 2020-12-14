@@ -15,29 +15,30 @@ ui <- navbarPage(
   title = div("COVID-19 cases in Canada", img(src = "maple-leaf.png", style = "margin-left: 10px; margin-right: 5px; height: 20px; width: auto;")),
   theme = shinytheme("cerulean"),
   tabPanel("Home",
-           sidebarPanel(
-             uiOutput("snapshot"),
-             uiOutput("summary_type"),
-             uiOutput("grouping_variable"),
-             uiOutput("age_group"),
-             uiOutput("death"),
-             uiOutput("gender"),
-             uiOutput("hospital_status"),
-             uiOutput("occupation"),
-             uiOutput("region"),
-             uiOutput("transmission"),
-             width = 3
-           ),
-           mainPanel(
-             tags$style(type="text/css",
-                        ".shiny-output-error { visibility: hidden; }",
-                        ".shiny-output-error:before { visibility: hidden; }",
-                        "a:hover { text-decoration: none !important; }"
-             ),
-             div(tags$strong("Please use with caution: "), "this data is preliminary and subject to change. Please visit ", tags$a(href = "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1310078101", target = "_blank", style = "color: #c27571; font-weight: bold; text-decoration: underline;", "this page"), "to learn more about the data.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
-             plotlyOutput("get_line_plot") %>% withSpinner(color = "#44ade9"), br(), br(), br(),
-             width = 9
-           )
+   sidebarPanel(
+     uiOutput("snapshot"),
+     uiOutput("summary_type"),
+     uiOutput("grouping_variable"),
+     uiOutput("age_group"),
+     uiOutput("death"),
+     uiOutput("gender"),
+     uiOutput("hospital_status"),
+     uiOutput("occupation"),
+     uiOutput("region"),
+     uiOutput("transmission"),
+     width = 3
+   ),
+   mainPanel(
+     tags$style(type="text/css",
+      ".shiny-output-error { visibility: hidden; }",
+      ".shiny-output-error:before { visibility: hidden; }",
+      "a:hover { text-decoration: none !important; }",
+      ".col-sm-9 { position: fixed; right: 0; }"
+     ),
+     div(tags$strong("Please use with caution: "), "this data is preliminary and subject to change. Please visit ", tags$a(href = "https://www150.statcan.gc.ca/n1/pub/13-26-0003/132600032020001-eng.htm", target = "_blank", style = "color: #c27571; font-weight: bold; text-decoration: underline;", "this page"), "to learn more about the data.", style = "background-color: #f4e4e4; color: #c27571; border: 1px solid #efd5d9; border-radius: 3px; width: 100%; padding: 10px;"), br(), br(),
+     plotlyOutput("get_line_plot") %>% withSpinner(color = "#44ade9"), br(), br(), br(),
+     width = 9
+   )
   )
 )
 
@@ -155,7 +156,7 @@ server <- function(input, output) {
          legend.text = element_text(size = element_text_size * 0.8),
          legend.title = element_blank(),
          legend.position = "bottom"
-       )) %>% layout(legend = list(orientation = "h", x = 0, y = -0.25))
+       ))
     }
   })
 

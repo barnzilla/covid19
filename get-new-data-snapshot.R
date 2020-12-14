@@ -46,7 +46,7 @@ wrangle_data <- function(d) {
 }
 
 # Import CANSIM data
-d <- get_cansim("13-10-0781-01", refresh = TRUE)
+d <- get_cansim("13-26-0002", refresh = TRUE)
 
 # Wrangle data
 new_snapshot <- wrangle_data(d)
