@@ -45,7 +45,7 @@ wrangle_data <- function(d) {
 setwd("c:/users/joelb/onedrive/github/covid19")
 
 # Import data
-d <- read_csv(paste0(getwd(), "/data/raw-data/", list.files(paste0(getwd(), "/data/raw-data"))[1]))
+d <- read_csv(paste0(getwd(), "/data/raw-data/", sort(list.files(paste0(getwd(), "/data/raw-data")), decreasing = TRUE)[1]))
 
 # Wrangle data
 new_snapshot <- wrangle_data(d)
@@ -86,4 +86,4 @@ names(aggregate_data) <- c(
 aggregate_data[-c(1, ncol(aggregate_data))] <- lapply(aggregate_data[-c(1, ncol(aggregate_data))], as.character)
 
 # Export data
-saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-2020-12-10.Rdata"), compress = "xz")
+saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-2021-01-07.Rdata"), compress = "xz")
