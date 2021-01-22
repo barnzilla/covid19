@@ -86,4 +86,4 @@ names(aggregate_data) <- c(
 aggregate_data[-c(1, ncol(aggregate_data))] <- lapply(aggregate_data[-c(1, ncol(aggregate_data))], as.character)
 
 # Export data
-saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-2021-01-07.Rdata"), compress = "xz")
+saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-", Sys.Date() ,".Rdata"), compress = "xz")
