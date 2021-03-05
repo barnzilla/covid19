@@ -1,5 +1,5 @@
 # Load dependencies
-library(cansim); library(dplyr); library(plyr); library(stringr); library(readr); library(tidyr)
+library(cansim); library(plyr); library(dplyr); library(stringr); library(readr); library(tidyr)
 
 # Helper functions
 # Wrangle the raw data
