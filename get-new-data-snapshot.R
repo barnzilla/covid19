@@ -6,7 +6,7 @@ library(cansim); library(plyr); library(dplyr); library(stringr); library(readr)
 wrangle_data <- function(d) {
   d_wide <- d %>% filter(`Episode week` != 99)
 
-  # Add leading zeros to case identifier number
+  # Add leading zeros to Case Identifier Number
   d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
 
   # Identify select vectors
@@ -46,6 +46,55 @@ setwd("c:/users/joelb/onedrive/github/covid19")
 
 # Import data
 d <- read_csv(paste0(getwd(), "/data/raw-data/", sort(list.files(paste0(getwd(), "/data/raw-data")), decreasing = TRUE)[1]))
+
+# Change vector names
+lookup <- tibble(
+  short = c(
+    "COV_ID",
+    "COV_REG",
+    "COV_EW",
+    "COV_EWG",
+    "COV_EY",
+    "COV_GDR",
+    "COV_AGR",
+    "COV_OCC",
+    "COV_ASM",
+    "COV_OW",
+    "COV_OY",
+    "COV_HSP",
+    "COV_RSV",
+    "COV_RW",
+    "COV_RY",
+    "COV_DTH",
+    "COV_TRM"
+  ),
+  long = c(
+    "Case identifier number",
+    "Region",
+    "Episode week",
+    "Episode week group",
+    "Episode year",
+    "Gender",
+    "Age group",
+    "Occupation",
+    "Asymptomatic",
+    "Onset week of symptoms",
+    "Onset year of symptoms",
+    "Hospital status",
+    "Recovered",
+    "Resolution week",
+    "Resolution year",
+    "Death",
+    "Transmission"
+  )
+)
+names(d) <- sapply(names(d), function(x) {
+  if(x %in% lookup$short) {
+    output <- lookup$long[lookup$short == x]
+  } else {
+    output <- x
+  }
+})
 
 # Wrangle data
 new_snapshot <- wrangle_data(d)

@@ -5,9 +5,9 @@ account: microsim
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2927086
-bundleId: 4305024
+bundleId: 4454548
 url: https://microsim.shinyapps.io/covid19/
-when: 1614954139.5053
+when: 1618063939.05358
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: appOLD.R|get-new-data-snapshot.R|README.md|old-data|Table 13-10-0766-01 snapshots
