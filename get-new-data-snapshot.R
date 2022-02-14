@@ -45,7 +45,7 @@ wrangle_data <- function(d) {
 setwd("c:/users/joelb/onedrive/github/covid19")
 
 # Import data
-d <- read_csv(paste0(getwd(), "/data/raw-data/", sort(list.files(paste0(getwd(), "/data/raw-data")), decreasing = TRUE)[1]))
+d <- read_csv(paste0(getwd(), "/raw-data/", sort(list.files(paste0(getwd(), "/data/raw-data")), decreasing = TRUE)[1]))
 
 # Change vector names
 lookup <- tibble(
