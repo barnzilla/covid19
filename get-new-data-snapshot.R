@@ -27,10 +27,10 @@ wrangle_data <- function(d) {
   d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
 
   # Add day (select first day of the week since not given), month and reference year vectors together and structure as a date object
-  d_wide$`Episode date` <- as.Date(paste(d_wide$`Episode year`, str_pad(d_wide$`Episode week`, width = 2, pad = 0), 1, sep = "-"), "%Y-%U-%u")
+  d_wide$`Episode date` <- as.Date(paste(paste0("20", d_wide$`Episode year`), str_pad(d_wide$`Episode week`, width = 2, pad = 0), 1, sep = "-"), "%Y-%U-%u")
 
   # Change format to %d-%b-%y
-  d_wide$`Episode date` <- strftime(d_wide$`Episode date`, format = "%d-%b-%y")
+  #d_wide$`Episode date` <- strftime(d_wide$`Episode date`, format = "%d-%b-%y")
 
   # Remove unwanted vectors from data
   d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Recovered, Death)
@@ -45,7 +45,7 @@ wrangle_data <- function(d) {
 setwd("c:/users/joelb/onedrive/github/covid19")
 
 # Import data
-d <- read_csv(paste0(getwd(), "/raw-data/", sort(list.files(paste0(getwd(), "/data/raw-data")), decreasing = TRUE)[1]))
+d <- read_csv(paste0(getwd(), "/raw-data/", sort(list.files(paste0(getwd(), "/raw-data")), decreasing = TRUE)[1]))
 
 # Change vector names
 lookup <- tibble(
