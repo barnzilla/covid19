@@ -10,8 +10,9 @@ wrangle_data <- function(d) {
   d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
 
   # Identify select vectors
-  vectors_to_factor <- c("Age group", "Gender", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital status", "Recovered", "Death")
-
+  #vectors_to_factor <- c("Age group", "Gender", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital status", "Recovered", "Death")
+  vectors_to_factor <- c("Age group", "Gender", "Region", "Occupation", "Asymptomatic", "Transmission", "Hospital status", "Death")
+  
   # Restructure as factors
   d_wide[vectors_to_factor] <- lapply(d_wide[vectors_to_factor], factor)
 
@@ -23,7 +24,7 @@ wrangle_data <- function(d) {
   d_wide$Asymptomatic <- revalue(d_wide$Asymptomatic, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
   d_wide$Transmission <- revalue(d_wide$Transmission, c("1" = "Domestic acquisition", "2" = "International travel", "9" = "Not stated"), warn_missing = FALSE)
   d_wide$`Hospital status` <- revalue(d_wide$`Hospital status`, c("1" = "Hospitalized and in intensive care unit", "2" = "Hospitalized, but not in intensive care unit", "3" = "Not hospitalized", "9" = "Not stated/unknown"), warn_missing = FALSE)
-  d_wide$Recovered <- revalue(d_wide$Recovered, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
+  #d_wide$Recovered <- revalue(d_wide$Recovered, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
   d_wide$Death <- revalue(d_wide$Death, c("1" = "Yes", "2" = "No", "9" = "Not stated"), warn_missing = FALSE)
 
   # Add day (select first day of the week since not given), month and reference year vectors together and structure as a date object
@@ -33,7 +34,8 @@ wrangle_data <- function(d) {
   #d_wide$`Episode date` <- strftime(d_wide$`Episode date`, format = "%d-%b-%y")
 
   # Remove unwanted vectors from data
-  d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Recovered, Death)
+  #d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Recovered, Death)
+  d_wide <- d_wide %>% select("Case identifier number", "Episode date", Gender, "Age group", "Region", "Occupation", Asymptomatic, Transmission, "Hospital status", Death)
 
   # Order data by case ids in ascending order
   d_wide <- d_wide %>% arrange(`Case identifier number`)
@@ -45,7 +47,7 @@ wrangle_data <- function(d) {
 setwd("c:/users/joelb/onedrive/github/covid19")
 
 # Import data
-d <- read_csv(paste0(getwd(), "/raw-data/", sort(list.files(paste0(getwd(), "/raw-data")), decreasing = TRUE)[1]))
+d <- read_csv(paste0(getwd(), "/raw-data/", sort(list.files(paste0(getwd(), "/raw-data"), pattern = ".csv"), decreasing = TRUE)[1]))
 
 # Change vector names
 lookup <- tibble(
