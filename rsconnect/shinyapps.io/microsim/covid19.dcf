@@ -5,9 +5,10 @@ account: microsim
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2927086
-bundleId: 5879981
+bundleId: 6083921
 url: https://microsim.shinyapps.io/covid19/
-when: 1651886008.47548
+when: 1657375472.12496
+lastSyncTime: 1657375472.12496
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: appOLD.R|COVID19-eng-2022-03-18.zip|COVID19-eng-2022-04-29.zip|get-new-data-snapshot.R|README.md|old-data|raw-data|Table 13-10-0766-01 snapshots
+ignoredFiles: appOLD.R|get-new-data-snapshot.R|README.md|old-data|raw-data|Table 13-10-0766-01 snapshots
