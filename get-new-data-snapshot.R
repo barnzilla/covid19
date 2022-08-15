@@ -4,7 +4,7 @@ library(cansim); library(plyr); library(dplyr); library(stringr); library(readr)
 # Helper functions
 # Wrangle the raw data
 wrangle_data <- function(d) {
-  d_wide <- d %>% filter(`Episode week` != 99)
+  d_wide <- d %>% filter(`Episode week` != 99, `Episode year` != 99)
 
   # Add leading zeros to Case Identifier Number
   d_wide$`Case identifier number` <- str_pad(d_wide$`Case identifier number`, width = nchar(max(as.numeric(d$`Case identifier number`))), pad = "0")
@@ -47,7 +47,8 @@ wrangle_data <- function(d) {
 setwd("c:/users/joelb/onedrive/github/covid19")
 
 # Import data
-d <- read_csv(paste0(getwd(), "/raw-data/", sort(list.files(paste0(getwd(), "/raw-data"), pattern = ".csv"), decreasing = TRUE)[1]))
+data_file <- sort(list.files(paste0(getwd(), "/raw-data"), pattern = ".csv"), decreasing = TRUE)[1]
+d <- read_csv(paste0(getwd(), "/raw-data/", data_file))
 
 # Change vector names
 lookup <- tibble(
@@ -137,4 +138,4 @@ names(aggregate_data) <- c(
 aggregate_data[-c(1, ncol(aggregate_data))] <- lapply(aggregate_data[-c(1, ncol(aggregate_data))], as.character)
 
 # Export data
-saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-", Sys.Date() ,".Rdata"), compress = "xz")
+saveRDS(aggregate_data, paste0("c:/users/joelb/onedrive/github/covid19/data/aggregate-data-", tools::file_path_sans_ext(gsub("COVID19-eng-", "", data_file)) ,".Rdata"), compress = "xz")
