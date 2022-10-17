@@ -97,6 +97,7 @@ server <- function(input, output) {
     if(is.null(input$snapshot)) {
       return()
     } else {
+      req(input$grouping_variable)
       # Set plot settings
       point_size <- 0.5
       element_text_size <- 12
